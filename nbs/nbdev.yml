@@ -1,0 +1,14 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "aidialog"
+  site-url: "https://AnswerDotAI.github.io/aidialog"
+  description: "Read, search, and edit AI dialogs stored as Jupyter notebooks, and convert them to and from LLM chat histories"
+  repo-branch: main
+  repo-url: "https://github.com/AnswerDotAI/aidialog"
+
+format-links:
+  - html
+  - format: commonmark
+    text: Markdown

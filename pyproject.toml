@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aidialog"
+dynamic = ["version"]
+description = "Read, search, and edit AI dialogs stored as Jupyter notebooks, and convert them to and from LLM chat histories"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [{name = "Jeremy Howard", email = "github@jhoward.fastmail.fm"}]
+keywords = ['nbdev']
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/AnswerDotAI/aidialog"
+Documentation = "https://AnswerDotAI.github.io/aidialog/"
+
+[project.entry-points.nbdev]
+aidialog = "aidialog._modidx:d"
+
+[tool.setuptools.dynamic]
+version = {attr = "aidialog.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["aidialog"]
+
+[tool.nbdev]
