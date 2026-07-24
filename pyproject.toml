@@ -15,7 +15,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = []
+dependencies = ['nbformat', 'fastcore>=2.1.4', 'python-fastllm>=0.0.28']
+
+[project.optional-dependencies]
+dev = ['exhash', 'tiktoken']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/aidialog"
@@ -24,6 +27,9 @@ Documentation = "https://AnswerDotAI.github.io/aidialog/"
 [project.entry-points.nbdev]
 aidialog = "aidialog._modidx:d"
 
+[project.entry-points.pyskills]
+"aidialog.dlgskill" = "aidialog.dlgskill"
+
 [tool.setuptools.dynamic]
 version = {attr = "aidialog.__version__"}
 
@@ -31,3 +37,8 @@ version = {attr = "aidialog.__version__"}
 include = ["aidialog"]
 
 [tool.nbdev]
+allowed_metadata_keys = ['solveit']
+allowed_cell_metadata_keys = ['solveit_ai']
+
+[tool.chkstyle]
+skip_paths = ["_modidx.py"]
