@@ -10,10 +10,10 @@ __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 't
            'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds', 'join_out',
            'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'mk_jmsg', 'mk_stream', 'mk_error',
            'mk_dispdata', 'mk_execresult', 'output_from_msg', 'dlg2py', 'copy_export', 'merge_metas', 'merge_parts',
-           'ruuid4', 'Attachment']
+           'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools']
 
 # %% ../nbs/00_dialog.ipynb #5571d07a
-import base64, copy, random, weakref
+import base64, copy, random, re, weakref
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
@@ -557,3 +557,55 @@ tiny_png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUl
 # %% ../nbs/00_dialog.ipynb #036da886
 @patch
 def todict(self:Dialog): return {k:v for k,v in asdict(self).items() if k[0]!='_'}
+
+# %% ../nbs/00_dialog.ipynb #ca70a93e
+_tool_info, _usage_info = 'json {.tool}', 'json {.usage}'
+
+def _fmt_param(v, mx=40):
+    "Compact display form of one tool arg or result value"
+    s = v if isinstance(v, str) else dumps(v, ensure_ascii=False)
+    s = s.replace('\n', '\\n')
+    if len(s) > mx: s = s[:mx] + '…'
+    return dumps(s, ensure_ascii=False)
+
+def _code_span(txt):
+    "Wrap `txt` in a backtick span longer than any backtick run inside it"
+    ticks = '`'*(max(map(len, re.findall('`+', txt)), default=0)+1)
+    pad = ' ' if '`' in txt else ''
+    return f"{ticks}{pad}{txt}{pad}{ticks}"
+
+_code_args = {'py':'code', 'python':'code', 'bash':'cmd'}
+
+def tool_md(d):
+    "Display markdown for one parsed `{.tool}` block: a folded details div labeled `func(params)→result`, code tools shown as code"
+    params = ', '.join(f"{k}={_fmt_param(v)}" for k,v in (d.get('args') or {}).items())
+    res = d.get('result')
+    tail = f"→{_fmt_param(res)}" if res not in (None, '') else ''
+    label = _code_span(f"{d.get('name')}({params}){tail}")
+    code = (d.get('args') or {}).get(_code_args.get(d.get('name'), ''))
+    if code is not None:
+        body = f"Code:\n{fenced(str(code), d.get('name'))}"
+        if str(res or '').strip(): body += f"\n\nOutput:\n\n{fenced(str(res))}"
+    else: body = fenced(dumps(d, indent=2, ensure_ascii=False), 'json')
+    return fenced(f"## {label}\n\n{body}", ' {.details .tool-usage-details}', ch=':')
+
+def usage_md(d):
+    "Display markdown for one parsed `{.usage}` block: a folded details div labeled with cost or tokens"
+    summ = d.get('summary') or (f"${d['cost']:.4f}" if d.get('cost') else f"{d.get('total_tokens', 0):,} tokens")
+    det = d.get('detail') or ' | '.join(f"{k}={v:,}" if isinstance(v, int) else f"{k}={v}"
+                                        for k,v in d.items() if v and k != 'model')
+    body = f"## {summ}\n\n{_code_span(det)}"
+    return fenced(body, ' {.details .token-usage-details}', ch=':')
+
+def fmt_tools(s):
+    "Rewrite fenced JSON tool/usage wire blocks in `s` into folded `::: details` display markdown"
+    out, pos = [], 0
+    for info,body,start,end in fenced_blocks(s):
+        if info not in (_tool_info, _usage_info): continue
+        try: d = loads(body)
+        except Exception: continue
+        out.append(s[pos:start])
+        out.append((tool_md(d) if info == _tool_info else usage_md(d)) + '\n')
+        pos = end
+    out.append(s[pos:])
+    return ''.join(out)
