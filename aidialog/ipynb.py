@@ -11,11 +11,9 @@ __all__ = ['reply_sep', 'att2dict', 'split_cell_src', 'get_ipynb', 'write_ipynb'
 # %% ../nbs/01_ipynb.ipynb #d3d0463b
 from fastcore.utils import *
 from fastcore.xtras import atomic_save
-import nbformat,json
-from nbformat.v4 import new_markdown_cell as new_md, new_code_cell as new_code, new_raw_cell as new_raw, new_notebook
+from fastcore.nbio import mk_cell,new_nb,dict2nb,read_nb,nb2str,repair_cell,repair_nb
+import json
 from base64 import b64encode,b64decode
-from nbformat.validator import NotebookValidationError
-from nbformat.reader import NotJSONError
 from .dialog import *
 
 # %% ../nbs/01_ipynb.ipynb #aaaeb85a
@@ -49,10 +47,10 @@ def cell_meta(self:Message):
 # %% ../nbs/01_ipynb.ipynb #0dde746d
 @patch
 def to_cell(self:Message, version=2):
-    "Convert message to an nbformat cell"
+    "Convert message to a notebook cell"
     meta = self.cell_meta()
     cts = self.content or ''
-    f = new_md if self.msg_type in (snote,sprompt) else new_code if self.msg_type == scode else new_raw
+    cell_type = 'markdown' if self.msg_type in (snote,sprompt) else self.msg_type
     if self.msg_type==sprompt:
         meta['solveit_ai'] = True
         if o := self.ai_res: cts = cts + reply_sep + o
@@ -60,29 +58,26 @@ def to_cell(self:Message, version=2):
     if self.msg_type==scode and self.output:
         outputs = self.output
         if version==1: outputs = json.loads(outputs)
-        outkw['outputs'] = [nbformat.from_dict(_clean_out_meta(o)) for o in outputs]
+        outkw['outputs'] = [_clean_out_meta(o) for o in outputs]
     atts = {att.id: att2dict(att) for att in (self.attachments or [])}
     if atts and self.msg_type in (sprompt,snote): outkw['attachments'] = atts
-    id_ = self.id
-    try: return f(cts, id=id_, metadata=meta, **outkw)
-    except NotebookValidationError as e:
-        print(f"NB validation err: {e}")
-        outkw['outputs'] = [] if self.msg_type == scode else ''
-        return f(cts, id=id_, metadata=meta, **outkw)
+    cell = mk_cell(cts, cell_type, id=self.id, metadata=meta, **outkw)
+    if repairs := repair_cell(cell): print('NB repair:', '; '.join(repairs))
+    return cell
 
 # %% ../nbs/01_ipynb.ipynb #10a73cfc
 def get_ipynb(dlg:Dialog, version=2, msgs=None):
     "Notebook object for `dlg`; `msgs` defaults to all its messages"
     cells = [m.to_cell(version=version) for m in (dlg.messages if msgs is None else msgs)]
-    return new_notebook(cells=cells, metadata=dict(dlg.meta))
+    nb = new_nb(cells=cells, meta=dict(dlg.meta))
+    if repairs := repair_nb(nb): print('NB repair:', '; '.join(repairs))
+    return nb
 
 
 # %% ../nbs/01_ipynb.ipynb #ea5fa1dd
 def write_ipynb(dlg:Dialog, fname=None, version=2, msgs=None, **kwargs):
     "Write `dlg` as a notebook, or return the JSON string if `fname` is None; `kwargs` (e.g. `uid`/`gid`) pass to `atomic_save`"
-    nb = get_ipynb(dlg, version=version, msgs=msgs)
-    res = nbformat.writes(nb, indent=2)
-    if not res.endswith('\n'): res += '\n'
+    res = nb2str(get_ipynb(dlg, version=version, msgs=msgs))
     if not fname: return res
     with atomic_save(Path(fname).expanduser(), mode='w', encoding='utf-8', **kwargs) as f: f.write(res)
 
@@ -95,9 +90,10 @@ def write(self:Dialog, base_path, version=2, msgs=None, **kwargs):
 def ipynb_cells(path, nm, prefix=None, suffix=None):
     tmpl = Path(path).expanduser()/f'{nm}.ipynb'
     if not tmpl.exists(): return []
-    try: cells = nbformat.read(tmpl, as_version=nbformat.NO_CONVERT).cells
-    except NotJSONError: return []
-    return listify(prefix) + cells + listify(suffix)
+    try: nb = read_nb(tmpl)
+    except json.JSONDecodeError: return []
+    if repairs := repair_nb(nb): print('NB repair:', '; '.join(repairs))
+    return listify(prefix) + nb.cells + listify(suffix)
 
 # %% ../nbs/01_ipynb.ipynb #ba0bb61e
 def dict2att(att_id, att_data):
@@ -108,7 +104,7 @@ def dict2att(att_id, att_data):
 
 def _output_from_cell(cell):
     if cell.cell_type!='code': return ''
-    return [nbformat.from_dict(o) for o in getattr(cell, 'outputs', [])]
+    return getattr(cell, 'outputs', [])
 
 # %% ../nbs/01_ipynb.ipynb #1b43e94f
 @patch
@@ -134,7 +130,9 @@ def from_cells(self:Dialog, cells):
 # %% ../nbs/01_ipynb.ipynb #6bdaa293
 def reads_ipynb(txt, cls=Dialog, name='dialog'):
     "Read a dialog from notebook JSON string `txt`, constructing via `cls`"
-    nb = nbformat.reads(txt, as_version=nbformat.NO_CONVERT)
+    nb = json.loads(txt)
+    if repairs := repair_nb(nb): print('NB repair:', '; '.join(repairs))
+    nb = dict2nb(nb)
     return cls(name=name, meta=dict(nb.get('metadata', {}))).from_cells(nb.cells)
 
 # %% ../nbs/01_ipynb.ipynb #7e8912e8
@@ -144,7 +142,7 @@ def read_ipynb(fname, cls=Dialog, name=None):
     if f.suffix != '.ipynb': f = f.with_suffix('.ipynb')
     if not f.exists(): return print(f,'does not exist')
     try: res = reads_ipynb(f.read_text(encoding='utf-8'), cls, name or f.stem)
-    except (NotJSONError, nbformat.ValidationError, PermissionError): return
+    except (json.JSONDecodeError, PermissionError): return
     res.path_ = f
     return res
 

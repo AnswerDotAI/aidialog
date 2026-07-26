@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aidialog"
 dynamic = ["version"]
-description = "Read, search, and edit AI dialogs stored as Jupyter notebooks, and convert them to and from LLM chat histories"
+description = "Read, search, edit, and persist AI dialogs stored as Jupyter notebooks"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
@@ -15,10 +15,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ['nbformat', 'fastcore>=2.1.4', 'python-fastllm>=0.0.28']
+dependencies = ['fastcore>=2.1.9']
 
 [project.optional-dependencies]
-dev = ['exhash', 'tiktoken']
+dev = ['exhash', 'nbformat']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/aidialog"

@@ -6,7 +6,7 @@ Use this whenever the question or edit concerns a notebook's content: messages, 
 
 Notebook work happens at three levels, and picking the right level is most of using this module well:
 
-- Content (this module): what the messages say and how they change. `summary_dlg`, `find_msgs`, `view_dlg`, the message editing operations, and `reply2dlg`/`dlg2reply` for a prompt's reply.
+- Content (this module): what the messages say and how they change. `summary_dlg`, `find_msgs`, `view_dlg`, the message editing operations.
 - Representation (`fastcore.nbio`, formerly `execnb.nbio`): which keys exist, whether a file is schema-valid, whether bytes changed. Start with `validate_nb`/`validate_cell`, which name the offending cell; use `read_nb` directly when the question is about the dict itself. For *plain* notebooks (no dialog semantics), nbio's `Notebook`/`NbCell` objects and `cell_*` functions are the content surface, and this module's word choice marks the layer: cells for notebooks, messages for dialogs.
 - Raw text: only when the file will not parse at all.
 
@@ -21,7 +21,6 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`); the `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
-- `reply2dlg(pmsg)`/`dlg2reply(sub)`: explode a reply into note/code messages and back; byte-exact for fmt2hist-clean replies.
 
 ## Idiomatic usage
 
@@ -42,7 +41,7 @@ __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replac
            'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'find_msgs',
            'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
            'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'add_msg_magic', 'load_ipython_extension', 'reply2dlg', 'dlg2reply']
+           'add_msg_magic', 'load_ipython_extension']
 
 # %% ../nbs/03_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -54,8 +53,7 @@ from fastcore.nbio import item2xml
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace, lnhash
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
-from .hist import reply2dlg, dlg2reply, render_outputs_ai  # chkstyle: ignore (re-exported via _all_)
-_all_ = ['reply2dlg', 'dlg2reply']
+
 
 # %% ../nbs/03_dlgskill.ipynb #278fa834
 _cur_dlg = None
