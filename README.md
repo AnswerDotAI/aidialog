@@ -31,7 +31,7 @@ The [`Dialog`](https://AnswerDotAI.github.io/aidialog/dialog.html#dialog) is the
 | ipynb file | storage, pragmatically lossless | [`read_ipynb`](https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb) | [`write_ipynb`](https://AnswerDotAI.github.io/aidialog/ipynb.html#write_ipynb) |
 | Claude Code session | storage | `sess2dlg` | `dlg2sess` |
 | Codex thread | storage (write-only so far) |  | `dlg2thread` |
-| fastllm chat (`Msg`/`Part`) | transmission, normalizing | `chat2dlg` | `dlg2chat` |
+| fastllm chat ([`Msg`](https://AnswerDotAI.github.io/aidialog/msg_parts.html#msg)/[`Part`](https://AnswerDotAI.github.io/aidialog/msg_parts.html#part)) | transmission, normalizing | `chat2dlg` | `dlg2chat` |
 | fastllm hist (live call input) | transmission, one-way |  | `dlg2hist` |
 | a prompt’s reply | self-similar | `reply2dlg` | `dlg2reply` |
 | XML views | display, one-way |  | [`view_dlg`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#view_dlg), [`msg2xml`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#msg2xml) |
