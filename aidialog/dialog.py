@@ -482,15 +482,18 @@ def directives(self:Message):
     return mk_cell(self.content, metadata=self.meta).directives
 
 def _get_exported(self): return 'export' in self.directives or 'exports' in self.directives
-def _set_exported(self, v):
-    c = mk_cell(self.content, metadata=self.meta)
-    d = c.directives
-    val = d.get('export', d.get('exports'))
-    c.directives = {k:x for k,x in d.items() if k not in ('export','exports')}
-    if self.content != c.source: self.content = c.source
-    if v: self.meta.setdefault('nbdev',{})['export'] = val or 'true'
-Message.exported = property(_get_exported, _set_exported,
-    doc="Whether this message carries an nbdev export directive, in content or meta; assigning writes the meta form, migrating any content directive")
+Message.exported = property(_get_exported,
+    doc="Whether this message carries an nbdev export directive, in content or meta (read-only: edit content, or assign `meta_exported`)")
+
+def _get_mexp(self): return any(k in self.meta.get('nbdev',{}) for k in ('export','exports'))
+def _set_mexp(self, v):
+    if v: self.meta.setdefault('nbdev',{})['export'] = 'true'
+    else:
+        nbd = self.meta.get('nbdev',{})
+        for k in ('export','exports'): nbd.pop(k, None)
+        if not nbd: self.meta.pop('nbdev', None)
+Message.meta_exported = property(_get_mexp, _set_mexp,
+    doc="The meta `nbdev` export entry alone - the host-owned switch; assigning writes or clears only meta, never content")
 
 def dlg2py(dlg):
     "The exported code of `dlg`, as a python source string"
