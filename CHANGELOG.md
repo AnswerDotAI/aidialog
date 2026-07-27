@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.3
+
+### New Features
+
+- Add the `msg_parts` message model and `msg2md`/`dlg2md` Markdown rendering ([#4](https://github.com/AnswerDotAI/aidialog/pull/4)), thanks to [@jph00](https://github.com/jph00)
+- Add folded-display rendering for tool calls and token usage blocks ([#3](https://github.com/AnswerDotAI/aidialog/issues/3))
+
+
 ## 0.0.2
 
 ### New Features
