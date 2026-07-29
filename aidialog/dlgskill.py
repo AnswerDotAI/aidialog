@@ -16,8 +16,8 @@ Dropping a level is correct exactly when the question is about the representatio
 
 The function/method two-shapes contract is `fastcore.editskill`'s, learned once: the function is a transaction addressed by `dlg=` (an ipynb path, or None meaning the current dialog file: `set_dlg`); the method is a session on a held `Dialog` or `Message`, saved by an explicit `dlg.save()` (`msg_str_replace(id, ..., dlg=p)` ⟷ `m.str_replace(...)`). Wrapping any message list in an ephemeral `Dialog(msgs)` makes the whole session surface available on it.
 
-- `summary_dlg(dlg)` / `d.summary()`: one preview line per message, `id:t:content` (t: c=code n=note p=prompt r=raw).
-- `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as preview lines. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
+- `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t:content` (t: c=code n=note p=prompt r=raw), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
+- `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`); the `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
@@ -102,14 +102,14 @@ def msg(self:Dialog,
 def summary(self:Dialog,
     maxlen:int=120, # Maximum characters per line
 ):
-    "One `preview` line per message: `id:t:content` (t: c=code n=note p=prompt r=raw)"
+    "One `preview` per message: `id:t:content` (t: c=code n=note p=prompt r=raw), plus a `> ` line for a prompt's reply"
     return self.messages.show(maxlen)
 
 def summary_dlg(
     dlg=None, # An ipynb path; the current dialog file if None
     maxlen:int=120, # Maximum characters per line
 ):
-    "One `preview` line per message of the dialog file"
+    "One `preview` per message of the dialog file"
     return _to_dlg(dlg).summary(maxlen)
 
 # %% ../nbs/03_dlgskill.ipynb #9d26ea0f
@@ -256,7 +256,7 @@ def find_msgs(
     re_pattern:str='', # Regex over content (a prompt's reply included), DOTALL+MULTILINE; an invalid regex matches literally
     dlg=None, # An ipynb path; the current dialog file if None
     **kwargs,
-)->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), shown as preview lines
+)->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews
     "Find messages in the dialog file matching all the given criteria; for live results, call `Dialog.find_msgs`"
     return MsgRows(MsgRow(m) for m in _to_dlg(dlg).find_msgs(re_pattern, **kwargs))
 

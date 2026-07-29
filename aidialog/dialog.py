@@ -38,12 +38,12 @@ def add_id_hash(cls, attr):
 
 # %% ../nbs/01_dialog.ipynb #352b878b
 class Msgs(L):
-    "A list of `Message`s with a preview-per-line repr"
+    "A list of `Message`s with a `preview` repr"
     def show(self,
         maxlen:int=120, # Maximum characters per preview line
         rows:int=None, # Max messages to show (None: all)
     ):
-        "One `preview` line per message"
+        "One `preview` per message: a row line, plus a reply line for prompts"
         xs = self if rows is None else self[:rows]
         res = '\n'.join(m.preview(maxlen) for m in xs)
         if rows is not None and len(self)>rows: res += f'\n…({len(self)-rows} more)'
@@ -196,19 +196,24 @@ def _repr_markdown_(self:Message):
 </details>"""
 
 # %% ../nbs/01_dialog.ipynb #145c8a42
+def _prev_line(txt, maxlen, pre=''):
+    "One escaped preview line, `pre`+`txt` capped at `maxlen`, ending in a humanized `[size]` when `txt` was cut"
+    return truncstr((pre+txt).replace('\n', '\\n'), maxlen, suf=f'…[{humanize(len(txt))}]')
+
 @patch
 def preview(self:Message,
-    maxlen:int=120, # Maximum characters in the line
+    maxlen:int=120, # Maximum characters per line
 ):
-    "Escaped one-line summary, the row format for `Msgs` displays: `id:t:content` (t: c=code n=note p=prompt r=raw)"
-    s = f"{self.id}:{self.msg_type[0]}:{self.content}"
-    if self.msg_type==sprompt and self.ai_res: s += f" ⇒ reply({len(self.ai_res)})"
-    elif self.output: s += f" ⇒ out({len(str(self.output))})"
-    return truncstr(s.replace('\n', '\\n'), maxlen)
+    "Escaped summary rows: `id:t:content` (t: c=code n=note p=prompt r=raw), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead"
+    txt = self.content or (f"<{self.meta['rec_kind']}>" if self.meta.get('rec_kind') else '')
+    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}:")
+    if self.msg_type==sprompt and self.ai_res: return res + '\n' + _prev_line(self.ai_res, maxlen, '> ')
+    if self.output: res += f" ⇒ out({humanize(len(str(self.output)))})"
+    return res
 
 # %% ../nbs/01_dialog.ipynb #a72644ce
 class MsgRow:
-    "Snapshot of one message: `id`, `msg_type`, `content`, `out` (reply or output text), and `meta`; shown as its preview line"
+    "Snapshot of one message: `id`, `msg_type`, `content`, `out` (reply or output text), and `meta`; shown as its preview"
     def __init__(self, m, maxlen=120):
         self.id,self.msg_type,self.content = m.id,m.msg_type,m.content
         self.meta = copy.deepcopy(m.meta)
@@ -216,8 +221,8 @@ class MsgRow:
         self._pv = m.preview(maxlen)
     def __repr__(self): return self._pv
 
-class MsgRows(list):
-    "A list of `MsgRow`s, one preview line each"
+class MsgRows(L):
+    "A list of `MsgRow`s, shown as their previews"
     def __repr__(self): return '\n'.join(repr(o) for o in self)
 
 # %% ../nbs/01_dialog.ipynb #e4fb159d
