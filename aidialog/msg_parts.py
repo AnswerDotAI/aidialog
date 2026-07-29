@@ -10,7 +10,7 @@ __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 'r
            'strip_tools', 'conv_tools', 'fmt2hist', 'StopResponse', 'FullResponse', 'mk_tr_details', 'hist2fmt']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
-import json
+import base64, json
 from json import dumps
 from dataclasses import dataclass, field
 from fastcore.utils import *
@@ -153,6 +153,32 @@ def url_mime(url, default='application/octet-stream'):
 class MediaUrl(BasicRepr):
     "Direct URL media reference"
     def __init__(self, url, mime=None): self.url, self.mime = url, ifnone(mime, url_mime(url))
+
+# %% ../nbs/00_msg_parts.ipynb #859905d7
+def _mime2part_type(mime):
+    "Map MIME string to canonical PartType"
+    if mime.startswith('image/'): return PartType.input_image
+    if mime.startswith('audio/'): return PartType.input_audio
+    if mime.startswith('video/'): return PartType.input_video
+    return PartType.input_file
+
+def _bytes2content(data):
+    "Convert bytes to fastllm canonical content"
+    mtype = detect_mime(data)
+    if not mtype: raise ValueError(f'Data must be a supported file type, got {data[:10]}')
+    encoded = base64.b64encode(data).decode("utf-8")
+    return Part(type=_mime2part_type(mtype), text=f'data:{mtype};base64,{encoded}')
+
+def _url2content(o):
+    "Convert MediaUrl to fastllm canonical content"
+    mime = o.mime or url_mime(o.url)
+    return Part(type=_mime2part_type(mime), text=o.url, data=dict(mime=mime))
+
+def _mk_content(o):
+    if isinstance(o, str):        return Part(type=PartType.text, text=o)
+    elif isinstance(o, bytes):    return _bytes2content(o)
+    elif isinstance(o, MediaUrl): return _url2content(o)
+    return o
 
 # %% ../nbs/00_msg_parts.ipynb #ee9c825e
 tool_info = 'json {.tool}'     # fence info string of a tool block: {id, name, args, result} (+server; `error` reserved)
