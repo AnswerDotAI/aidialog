@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.4
+
+### New Features
+
+- Show a prompt reply on its own preview line, with size hints for truncated content ([#6](https://github.com/AnswerDotAI/aidialog/issues/6))
+- Split export state into a read-only merged `exported` and a host-owned `meta_exported` switch ([#5](https://github.com/AnswerDotAI/aidialog/pull/5)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.3
 
 ### New Features
