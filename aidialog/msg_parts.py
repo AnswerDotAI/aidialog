@@ -7,7 +7,8 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'Part', 'Msg', 'ToolCall',
            'display_list', 'mk_tool_res_msg', 'sys_text', 'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'parse_tools',
-           'strip_tools', 'conv_tools', 'fmt2hist', 'StopResponse', 'FullResponse', 'mk_tr_details', 'hist2fmt']
+           'strip_tools', 'conv_tools', 'fmt2hist', 'ToolResponse', 'StopResponse', 'FullResponse', 'mk_tr_details',
+           'hist2fmt']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
 import base64, json
@@ -309,6 +310,11 @@ def fmt2hist(outp:str)->list[Msg]:
         else: result.append(msg)
     if result[-1].role == 'tool': result.append(Msg(role='assistant', content=[Part(type=PartType.text, text='.')])) 
     return result
+
+# %% ../nbs/00_msg_parts.ipynb #6fe280ec
+@dataclass
+class ToolResponse:
+    content: list[str,str]
 
 # %% ../nbs/00_msg_parts.ipynb #86265805
 class StopResponse(str): pass
