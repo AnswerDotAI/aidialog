@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.5
+
+### New Features
+
+- Add hist module with dialog↔chat history conversions, migrated from llmsurgery ([#7](https://github.com/AnswerDotAI/aidialog/issues/7))
+
+### Bugs Squashed
+
+- Add ToolResponse, moved from fastllm ([#8](https://github.com/AnswerDotAI/aidialog/pull/8)), thanks to [@curtis-allan](https://github.com/curtis-allan)
+
+
 ## 0.0.4
 
 ### New Features
