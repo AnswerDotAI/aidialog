@@ -130,7 +130,7 @@ def _fetch_url_partial(url, nbytes=512):
 
 # %% ../nbs/00_msg_parts.ipynb #b6f61273
 _ext_mime = {
-    '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp',
+    '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml',
     '.pdf':'application/pdf',
     '.mp3':'audio/mpeg', '.wav':'audio/wav', '.ogg':'audio/ogg', '.flac':'audio/flac', '.m4a':'audio/mp4',
     '.mp4':'video/mp4', '.mov':'video/quicktime', '.webm':'video/webm',
@@ -147,7 +147,7 @@ def url_mime(url, default='application/octet-stream'):
     "Guess mime from URL extension, and optional bytes fallback."
     if "youtube.com" in url or "youtu.be" in url: return "video/mp4"
     ext = '.' + url.rsplit('.', 1)[-1].split('?')[0].lower() if '.' in url.split('?')[0].split('/')[-1] else ''
-    if (mime:=_ext_mime.get(ext)) is None: return detect_mime(_fetch_url_partial(url))
+    if (mime:=_ext_mime.get(ext)) is None: mime = detect_mime(_fetch_url_partial(url))
     return ifnone(mime, default)
 
 # %% ../nbs/00_msg_parts.ipynb #189772f5
