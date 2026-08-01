@@ -119,14 +119,14 @@ def part_txt(p): return p.text if isinstance(p,Part) else p
 
 # %% ../nbs/00_msg_parts.ipynb #f30c7962
 @flexicache(time_policy(24*3600))
-def _fetch_url_partial(url, nbytes=512): 
-    "Fetch remote media bytes, optionally only first `nbytes`."
+def _fetch_url_partial(url, nbytes=512):
+    "Fetch remote media, returning `(content_type_header, bytes)`; bytes optionally only the first `nbytes`."
     import httpx  # deliberately lazy: keeps aidialog's deps to fastcore alone (may re-base on fastcore.net later)
     try:
         with httpx.stream('GET', url, headers={'Range': f'bytes=0-{nbytes-1}'}, follow_redirects=True) as r:
-            if r.status_code not in (200, 206): return
-            return r.read()
-    except (httpx.HTTPError, httpx.InvalidURL): return
+            if r.status_code not in (200, 206): return None, None
+            return r.headers.get('content-type'), r.read()
+    except (httpx.HTTPError, httpx.InvalidURL): return None, None
 
 # %% ../nbs/00_msg_parts.ipynb #b6f61273
 _ext_mime = {
@@ -144,10 +144,13 @@ def data_url(url):
     return header[5:].split(';',1)[0].strip() or 'application/octet-stream', body
 
 def url_mime(url, default='application/octet-stream'):
-    "Guess mime from URL extension, and optional bytes fallback."
+    "Guess mime from URL extension, then the server's Content-Type, then sniffed bytes; never None."
     if "youtube.com" in url or "youtu.be" in url: return "video/mp4"
     ext = '.' + url.rsplit('.', 1)[-1].split('?')[0].lower() if '.' in url.split('?')[0].split('/')[-1] else ''
-    if (mime:=_ext_mime.get(ext)) is None: mime = detect_mime(_fetch_url_partial(url))
+    if (mime:=_ext_mime.get(ext)) is None:
+        ctype, data = _fetch_url_partial(url)
+        mime = (ctype or '').split(';')[0].strip().lower()
+        if not mime or mime in ('application/octet-stream', 'text/plain'): mime = detect_mime(data)  # generic headers say nothing
     return ifnone(mime, default)
 
 # %% ../nbs/00_msg_parts.ipynb #189772f5
