@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.6
+
+### New Features
+
+- Add SVG mime type and ensure `url_mime` falls back to default when sniffing fails ([#9](https://github.com/AnswerDotAI/aidialog/issues/9))
+
+
 ## 0.0.5
 
 ### New Features
