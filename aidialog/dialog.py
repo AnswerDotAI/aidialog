@@ -18,7 +18,7 @@ from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,preferred_msg_out,concat_streams,render_md
+from fastcore.nbio import mk_cell,preferred_msg_out,concat_streams,render_md,dir_tag
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -204,9 +204,9 @@ def _prev_line(txt, maxlen, pre=''):
 def preview(self:Message,
     maxlen:int=120, # Maximum characters per line
 ):
-    "Escaped summary rows: `id:t:content` (t: c=code n=note p=prompt r=raw), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead"
+    "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead"
     txt = self.content or (f"<{self.meta['rec_kind']}>" if self.meta.get('rec_kind') else '')
-    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}:")
+    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}:")
     if self.msg_type==sprompt and self.ai_res: return res + '\n' + _prev_line(self.ai_res, maxlen, '> ')
     if self.output: res += f" ⇒ out({humanize(len(str(self.output)))})"
     return res
@@ -242,11 +242,14 @@ def mk_message(self:Dialog,
     before=None, # Insert before this `Message` or id
     msg_type=scode, # One of `smsg_types`
     output='', # Output list; code messages also accept a JSON string
+    meta=None, # Cell metadata, carried verbatim through save/load
+    export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
     **kwargs, # Passed to `msg_cls`
 ):
     "Make new message and insert it into notebook before/after specified cell, or start of list (idx=0) by default"
     if msg_type==scode and isinstance(output,str): output = loads(output or '[]')
-    msg = self.msg_cls(content, self, msg_type=msg_type, output=output, **kwargs)
+    msg = self.msg_cls(content, self, msg_type=msg_type, output=output, meta=meta, **kwargs)
+    if export: msg.meta_exported = True
     if 'id' not in kwargs:  # generated ids must not collide, even if the global random stream was re-seeded
         while any(m.id==msg.id for m in self.messages): msg.id = rtoken_hex(4)
     if isinstance(after,  Message): after =after.id

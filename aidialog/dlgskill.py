@@ -16,10 +16,10 @@ Dropping a level is correct exactly when the question is about the representatio
 
 The function/method two-shapes contract is `fastcore.editskill`'s, learned once: the function is a transaction addressed by `dlg=` (an ipynb path, or None meaning the current dialog file: `set_dlg`); the method is a session on a held `Dialog` or `Message`, saved by an explicit `dlg.save()` (`msg_str_replace(id, ..., dlg=p)` ⟷ `m.str_replace(...)`). Wrapping any message list in an ephemeral `Dialog(msgs)` makes the whole session surface available on it.
 
-- `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t:content` (t: c=code n=note p=prompt r=raw), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
+- `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket, as in nbio's `CellRow`, shows meta-form nbdev directives such as `[export]`), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
 - `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
-- `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section); `incl_out=True` on the line views appends the message's output the same way.
-- Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`); the `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
+- `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
+- Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
 ## Idiomatic usage
@@ -116,7 +116,7 @@ def summary_dlg(
 _t2tag = dict(note='markdown')
 
 def msg2xml(m, incl_out=False, trunc_out=True, ids=True):
-    "One message as concise XML: content bare inside its type tag, with an `<out>` section for a code output or a prompt's reply"
+    "One message as concise XML: content bare inside its type tag, an `<out>` section for a code output or a prompt's reply, and meta `nbdev` directives as attrs (a meta-exported message gets a bare `export`)"
     if m.msg_type==sprompt: o = m.ai_res
     elif incl_out and m.msg_type==scode and m.output:
         o = render_outputs_ai(m.output)
@@ -137,7 +137,7 @@ def view(self:Dialog,
     only_errors:bool=False, # Show only code messages with error outputs (implies `incl_out`)?
     trunc_out:bool=True, # Truncate each output to ~512 chars?
 ):
-    "This dialog as concise XML"
+    "This dialog as concise XML; meta-exported messages carry a bare `export` attr"
     ms = [m for m in self.messages if m.has_error] if only_errors else self.messages
     body = ''.join(msg2xml(m, incl_out or only_errors, trunc_out) for m in ms)
     return PrettyString(f'<dialog name="{self.name}">{body}</dialog>')
@@ -148,7 +148,7 @@ def view_dlg(
     only_errors:bool=False, # Show only code messages with error outputs (implies `incl_out`)?
     trunc_out:bool=True, # Truncate each output to ~512 chars?
 ):
-    "The dialog file as concise XML"
+    "The dialog file as concise XML; meta-exported messages carry a bare `export` attr"
     return _to_dlg(dlg).view(incl_out, only_errors, trunc_out)
 
 # %% ../nbs/04_dlgskill.ipynb #04cc9cbd
@@ -539,11 +539,13 @@ def add_msg(
     msg_type:str='code', # 'code', 'note', 'prompt', or 'raw'
     before:str=None, # message or id to insert before
     after:str=None, # message or id to insert after
+    meta=None, # Cell metadata, carried verbatim through save/load
+    export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
     dlg=None, # An ipynb path; the current dialog file if None
 ):
     "Add a new message before/after an existing one (pass exactly one), returning it"
     d, sv = _load_dlg(dlg)
-    m = d.mk_message(source, msg_type=msg_type,
+    m = d.mk_message(source, msg_type=msg_type, meta=meta, export=export,
         before=None if before is None else d.msg(before), after=None if after is None else d.msg(after))
     _save(d, sv)
     return m
@@ -574,11 +576,12 @@ def create_dlg(
 
 # %% ../nbs/04_dlgskill.ipynb #fb670f10
 def add_msg_magic(line, cell):
-    "Add a new message with the magic body as its source, taken verbatim."
+    "Add a new message with the magic body as its source, taken verbatim; a bare `export` token sets the meta `nbdev` export flag."
     kw = {}
     for t in shlex.split(line):
         if '=' in t: kw.update([t.split('=', 1)])
         elif t in smsg_types: kw.setdefault('msg_type', t)
+        elif t=='export': kw.setdefault('export', True)
         else: kw.setdefault('dlg', t)
     return add_msg(cell.rstrip('\n'), **kw)
 
