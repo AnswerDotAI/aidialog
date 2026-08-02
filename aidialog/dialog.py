@@ -7,10 +7,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dialog.html.md"""
 # %% auto #0
 __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'tiny_png', 'add_id_hash', 'Msgs', 'Dialog',
            'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output', 'prompt_output', 'Message',
-           'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds', 'join_out',
-           'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'ai_fmt', 'try_eval', 'mk_jmsg',
-           'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'output_from_msg', 'dlg2py', 'copy_export',
-           'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2md', 'dlg2md']
+           'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds', 'normalize_text_latex',
+           'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval', 'mk_jmsg', 'mk_stream',
+           'mk_error', 'mk_dispdata', 'mk_execresult', 'dlg2py', 'copy_export', 'merge_metas', 'merge_parts', 'ruuid4',
+           'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2md', 'dlg2md']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
 import base64, copy, random, re, weakref
@@ -18,7 +18,7 @@ from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,preferred_msg_out,concat_streams,render_md,dir_tag
+from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -348,11 +348,7 @@ def get_output_mds(output):
     return [o['data']['text/markdown'] for o in output
         if o.get('output_type') in ('display_data', 'execute_result') and 'text/markdown' in o.get('data', {})]
 
-# %% ../nbs/01_dialog.ipynb #26bfd638
-def join_out(d):
-    "Join Jupyter's list-of-lines output data into one string"
-    return ''.join(d) if isinstance(d, list) else d
-
+# %% ../nbs/01_dialog.ipynb #4a758426
 _display_env = re.compile(r'\\begin\{(align|equation|gather|multline|eqnarray)')
 
 def _latex_parts(s):
@@ -369,14 +365,14 @@ def normalize_text_latex(s:str, dollars=False):
     return f'{l}{tex}{r}'
 
 AI_RENDERERS = {  # chkstyle: ignore-node
-    'text/plain': lambda d: strip_ansi(str(d)),
+    'text/plain': lambda d: strip_ansi(str(join_out(d))),
     'text/html': join_out,
     'text/markdown': join_out,
     'text/latex': lambda d: normalize_text_latex(join_out(d)),
     'application/javascript': lambda d: f'<script>{join_out(d)}</script>',
 }
 
-# %% ../nbs/01_dialog.ipynb #fe8fc0f9
+# %% ../nbs/01_dialog.ipynb #2c4226a7
 def render_output_ai(out, renderers=None, dollars=False):
     "Plain-text rendering of one Jupyter output, as the AI sees it; `renderers` overrides/extends the per-mime table and `dollars` picks `$`-spelled math"
     r = AI_RENDERERS | ({'text/latex': lambda d: normalize_text_latex(join_out(d), dollars=True)} if dollars else {}) | (renderers or {})
@@ -389,6 +385,37 @@ def render_outputs_ai(outputs, renderers=None, dollars=False):
         print(f"Unexpected outputs: {outputs}")
         return ''
     return '\n'.join(render_output_ai(o, renderers=renderers, dollars=dollars) for o in concat_streams(outputs))
+
+# %% ../nbs/01_dialog.ipynb #11fded06
+def _render_md(out, html1st=True):
+    "One output as a Markdown part: `('txt',s)` pools into a shared fence, `('md',s)` stands alone"
+    mime,d = preferred_msg_out(out, html1st=html1st, include_imgs=True)
+    d = join_out(d)
+    if not d: return None
+    if   mime=='text/plain': return 'txt', strip_ansi(d)
+    elif mime=='text/html': return 'md', fenced(d.strip(), '{=html}')
+    elif mime=='application/javascript': return 'md', fenced(f'<script>{d}</script>', '{=html}')
+    elif mime=='image/svg+xml': return 'md', fenced(d.strip(), '{=html}')
+    elif mime in ('text/markdown','text/latex'): return 'md', d.strip()
+    elif mime in ('image/jpeg','image/png'): return 'md', f'![](data:{mime};base64,{"".join(d.split())})'
+    return None
+
+def render_md(outputs, html1st=True):
+    "Render notebook outputs as Markdown: text to ``` fences, HTML in `{=html}`, markdown inlined, images as data URIs"
+    if (not isinstance(outputs, (list,tuple))) or (outputs and not isinstance(outputs[0],dict)): return ''
+    parts,buf = [],[]
+    def _flush():
+        if (txt := ''.join(buf).rstrip()): parts.append(fenced(txt, 'output'))
+        buf.clear()
+    for out in concat_streams(outputs):
+        if not (r := _render_md(out, html1st=html1st)): continue
+        k,s = r
+        if k=='txt': buf.append(s if s.endswith('\n') else s+'\n')
+        else:
+            _flush()
+            parts.append(s)
+    _flush()
+    return '\n\n'.join(parts)
 
 # %% ../nbs/01_dialog.ipynb #027d1774
 def ai_fmt(out, strip_tools=False):
@@ -438,17 +465,6 @@ def mk_dispdata(data, metadata=None, display_id=None):
 def mk_execresult(data, metadata=None, execution_count=1):
     return mk_jmsg('execute_result', data=data, metadata=metadata, execution_count=execution_count)
 
-def output_from_msg(jmsg):
-    "ipynb output dict for the Jupyter iopub message dict `jmsg`"
-    mt,c = jmsg['header']['msg_type'],jmsg['content']
-    if mt=='stream': return dict(output_type=mt, name=c['name'], text=c['text'])
-    if mt=='error': return dict(output_type=mt, ename=c['ename'], evalue=c['evalue'], traceback=c['traceback'])
-    if mt in ('execute_result','display_data'):
-        res = mk_output(mt, c['data'], c['metadata'])
-        if mt=='execute_result': res['execution_count'] = c.get('execution_count')
-        return res
-    raise ValueError(f'Unrecognized output msg type: {mt!r}')
-
 # %% ../nbs/01_dialog.ipynb #eb52bbdb
 @patch
 def clear_output(self:Message, wait=False):
@@ -473,7 +489,7 @@ def add_output(self:Message,
     if isupd := mt=='update_display_data':
         assert display_id
         jmsg['msg_type'] = jmsg['header']['msg_type'] = 'display_data'
-    out = output_from_msg(jmsg)
+    out = msg2out(jmsg)
     if trunc: out = trunc(out)
     if display_id: out['metadata']['did'] = display_id
     if isupd:

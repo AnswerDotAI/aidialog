@@ -20,11 +20,12 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 - `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
+- The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`) or id prefixes, and `fname=` overrides the notebook for one call. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel; on error the `%nbrun` cell itself fails, after a header naming the failed cell.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
 ## Idiomatic usage
 
-Start by registering the notebook: `set_dlg(path)` makes every function here default to it (and clikernel's `%nbrun` magic follows suit), so calls read as "do this to message X". Then orient before acting:
+Start by registering the notebook: `set_dlg(path)` makes every function here default to it (and the `%nbrun` magic follows suit), so calls read as "do this to message X". Then orient before acting:
 
 - `summary_dlg()` first for anything sizable: a cheap one-line-per-message map. `view_dlg()` when you need the full story in order with ids. Read a notebook in full before describing or changing what it does - the interleaved prose, examples, and stored outputs (`incl_out=True`) are the design rationale.
 - Read before probing: an ad-hoc "what happens if..." experiment usually re-derives, more slowly and less reliably, what an existing example cell already shows. If after reading you still need an experiment, that's a gap in the notebook - add it as a proper example cell so the next reader doesn't repeat it.
@@ -41,7 +42,7 @@ __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replac
            'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'find_msgs',
            'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
            'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'add_msg_magic', 'load_ipython_extension']
+           'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -49,7 +50,7 @@ from fastcore.utils import *
 from fastcore.meta import splice_sig, delegates
 from fastcore.xtras import str_diff
 from fastcore.xml import to_xml
-from fastcore.nbio import item2xml
+from fastcore.nbio import item2xml, read_nb, select_cells, show_cell
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace, lnhash
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
@@ -585,7 +586,34 @@ def add_msg_magic(line, cell):
         else: kw.setdefault('dlg', t)
     return add_msg(cell.rstrip('\n'), **kw)
 
-def load_ipython_extension(ipython): ipython.register_magic_function(add_msg_magic, 'cell', 'add_msg')
+
+
+# %% ../nbs/04_dlgskill.ipynb #589da1bd
+_nbrun_flags = ('above','below','all','exported','skip_noeval','continue_on_error')
+
+async def _run_nb_cells(shell, ids, fname, stop=True, **kw):
+    "Run code cells of `fname` selected by `select_cells` in `shell`'s namespace, a `--- id ---` header before each"
+    __tracebackhide__ = True
+    for c in select_cells(read_nb(fname), *ids, **kw):
+        print(f'--- {c.id} ---')
+        await show_cell(shell, c.source, raise_exc=stop)
+
+def nbrun_magic(line):
+    "Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides"
+    kw,ids = {},[]
+    for t in shlex.split(line):
+        if '=' in t: kw.update([t.split('=', 1)])
+        elif t in _nbrun_flags: kw.setdefault(t, True)
+        else: ids.append(t)
+    fname = kw.pop('fname', None) or getattr(cur_dlg(), 'path_', None)
+    if not fname: raise ValueError('No `fname` given and no current dialog file (`set_dlg`)')
+    stop = not kw.pop('continue_on_error', False)
+    return _run_nb_cells(get_ipython(), ids, fname, stop, **kw)
+
+# %% ../nbs/04_dlgskill.ipynb #56388a3a
+def load_ipython_extension(ipython):
+    ipython.register_magic_function(add_msg_magic, 'cell', 'add_msg')
+    ipython.register_magic_function(nbrun_magic, 'line', 'nbrun')
 
 try:
     from IPython import get_ipython
