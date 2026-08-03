@@ -18,10 +18,10 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 
 - `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket, as in nbio's `CellRow`, shows meta-form nbdev directives such as `[export]`), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
 - `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
-- `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
+- `view_dlg(dlg)` / `d.view()` / `view_msgs(*ids)` / `m.view()` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`) or id prefixes, and `fname=` overrides the notebook for one call. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel; on error the `%nbrun` cell itself fails, after a header naming the failed cell.
-- Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
+- Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msgs(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
 ## Idiomatic usage
 
@@ -30,7 +30,7 @@ Start by registering the notebook: `set_dlg(path)` makes every function here def
 - `summary_dlg()` first for anything sizable: a cheap one-line-per-message map. `view_dlg()` when you need the full story in order with ids. Read a notebook in full before describing or changing what it does - the interleaved prose, examples, and stored outputs (`incl_out=True`) are the design rationale.
 - Read before probing: an ad-hoc "what happens if..." experiment usually re-derives, more slowly and less reliably, what an existing example cell already shows. If after reading you still need an experiment, that's a gap in the notebook - add it as a proper example cell so the next reader doesn't repeat it.
 - `find_msgs` is the targeted view: keep the default `context=1` (the neighbouring markdown usually explains the match), and `ids=` with context is the positional query ("does A precede B?", "what's the idiom around here?"). Name questions are structural, not textual: `symdef_finder`/`symref_finder`/`ast_finder` beat regexes over binding syntax. Where available, rgapi's `nbrg` searches cell sources across files and returns the cell ids these functions take.
-- Edit at the right level: `add_msg`/`%%add_msg` for new messages; within a message, prefer hash-verified addressing (`lnhashview_msg`/`msg_exhash`, or exhash's `lnhashview_cell`/`cell_exhash` by path and cell id) - view with the lnhash variant the moment an edit is plausible, so the view doubles as the edit's address book. The plain `msg_*` editors fit where exhash can't express the edit, e.g. one `msg_str_replace` across an id list. Never splice via `read_nb`/`write_nb` internals: if a primitive is missing here, stop and propose adding it.
+- Edit at the right level: `add_msg`/`%%add_msg` for new messages; within a message, prefer hash-verified addressing (`lnhashview_msg`/`msg_exhash`, or exhash's `lnhashview_cells`/`cell_exhash` by path and cell id) - view with the lnhash variant the moment an edit is plausible, so the view doubles as the edit's address book. The plain `msg_*` editors fit where exhash can't express the edit, e.g. one `msg_str_replace` across an id list. Never splice via `read_nb`/`write_nb` internals: if a primitive is missing here, stop and propose adding it.
 - `dlg.validate()` catches model-level damage early; `dlg.save()` writes back. Don't wrap calls in defensive scaffolding (`hasattr`, `try/except`) - call directly and read the bare result.
 
 Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
@@ -39,10 +39,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
 # %% auto #0
 __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_ast_replace',
-           'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'find_msgs',
-           'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
-           'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
+           'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msgs', 'find_msgs', 'move_msgs',
+           'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder', 'symref_finder',
+           'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg', 'add_msg_magic',
+           'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -171,30 +171,23 @@ def view(self:Message,
         if o: res += f"\n<out>\n{truncstr(o, 512) if trunc_out else o}\n</out>"
     return PrettyString(res)
 
-def view_msg(
-    id, # Message id, looked up in `dlg` (unique prefixes allowed)
-    dlg=None, # An ipynb path; the current dialog file if None
-    nums:bool=True, # Show line numbers?
-    start_line:int=1, # Starting line to view
-    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
-    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
-    incl_out:bool=False, # Append the output (a prompt's reply, or code outputs) in an `<out>` block?
-    trunc_out:bool=True, # Truncate an included output to ~512 chars?
-):
-    "Show a message's content with optional line numbers or exhash addresses"
-    return _to_dlg(dlg).msg(id).view(nums, start_line, end_line, lnhashs, incl_out, trunc_out)
-
 def view_msgs(
-    *ids, # Message ids
+    *ids, # Message ids, looked up in `dlg` (unique prefixes allowed)
     dlg=None, # An ipynb path; the current dialog file if None
     nums:bool=True, # Show line numbers?
+    start_line:int=1, # Starting line to view (applied to each message)
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     incl_out:bool=False, # Append each output (a prompt's reply, or code outputs) in an `<out>` block?
     trunc_out:bool=True, # Truncate each included output to ~512 chars?
 ):
-    "Show several messages, each preceded by a `# msg <id>` header"
+    "Show one or more messages' contents, each preceded by a `# msg <id>` header when several"
+    if not ids: raise ValueError("view_msgs() requires at least one message id")
     d = _to_dlg(dlg)
-    return PrettyString('\n'.join(f"# msg {(m := d.msg(i)).id}\n{m.view(nums, lnhashs=lnhashs, incl_out=incl_out, trunc_out=trunc_out)}" for i in ids))
+    ms = [d.msg(i) for i in ids]
+    res = [m.view(nums, start_line, end_line, lnhashs, incl_out, trunc_out) for m in ms]
+    if len(res)==1: return res[0]
+    return PrettyString('\n'.join(f"# msg {m.id}\n{r}" for m,r in zip(ms,res)))
 
 # %% ../nbs/04_dlgskill.ipynb #4bf78327
 def _match_head(m, want):
@@ -422,7 +415,7 @@ def _set_out_text(m, s): m.output = s
 
 # %% ../nbs/04_dlgskill.ipynb #3b31bc59
 _msg_edit_doc = """
-Be sure you've viewed the message (e.g. `view_msg`) so you know the line nums.
+Be sure you've viewed the message (e.g. `view_msgs`) so you know the line nums.
 
 Message editing standard parameters:
 - `id`: message id (or list of ids, or 'all'), unique prefixes allowed
