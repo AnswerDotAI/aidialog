@@ -19,6 +19,7 @@ dependencies = ['fastcore>=2.1.17']
 
 [project.optional-dependencies]
 dev = ['exhash', 'nbformat']
+render = ['mdhtml']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/aidialog"

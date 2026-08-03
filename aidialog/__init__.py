@@ -2,6 +2,7 @@
 
 Modules:
 
-- `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model"""
+- `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model
+- `aidialog.render`: Message and dialog rendering: one projection from `Message` to semantic fasttags, shared by every app that displays a dialog"""
 
 __version__ = "0.0.7"
