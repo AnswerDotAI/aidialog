@@ -18,7 +18,7 @@ from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out
+from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -397,7 +397,7 @@ def _render_md(out, html1st=True):
     elif mime=='application/javascript': return 'md', fenced(f'<script>{d}</script>', '{=html}')
     elif mime=='image/svg+xml': return 'md', fenced(d.strip(), '{=html}')
     elif mime in ('text/markdown','text/latex'): return 'md', d.strip()
-    elif mime in ('image/jpeg','image/png'): return 'md', f'![](data:{mime};base64,{"".join(d.split())})'
+    elif mime in IMG_MIMES: return 'md', f'![](data:{mime};base64,{"".join(d.split())})'
     return None
 
 def render_md(outputs, html1st=True):
