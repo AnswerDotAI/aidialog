@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.7
+
+### New Features
+
+- Move prompt envelope, sigil refs, variables, and #ai static media into aidialog core; bump context image budget to 768px ([#17](https://github.com/AnswerDotAI/aidialog/issues/17))
+- Resize images for LLM context and pick one image per output, via shared `output_parts`/`merge_media` helpers ([#13](https://github.com/AnswerDotAI/aidialog/issues/13))
+- Move `join_out`/`output_from_msg` to fastcore.nbio, add `render_md` output-to-markdown renderer, and add %nbrun line magic ([#12](https://github.com/AnswerDotAI/aidialog/issues/12))
+- Support nbdev meta directives: `export=` in `add_msg`/`mk_message`, `[export]` in previews, and directive attrs in XML views ([#11](https://github.com/AnswerDotAI/aidialog/issues/11))
+- `url_mime`: use server Content-Type as fallback before byte sniffing ([#10](https://github.com/AnswerDotAI/aidialog/issues/10))
+
+
 ## 0.0.6
 
 ### New Features
