@@ -7,7 +7,7 @@ Docs: https://AnswerDotAI.github.io/aidialog/hist.html.md"""
 # %% auto #0
 __all__ = ['UNSUPPORTED_MSG', 'im_max', 'IMG_TOKS', 'expr_pat', 'expr_mtypes', 'jwrap', 'to_local_time', 'media_item',
            'resize_img', 'output_parts', 'merge_media', 'get_refs', 'sigil_pat', 'get_exprs', 'vars_tag', 'vars_hist',
-           'task_tags', 'warning_tag', 'dlg2hist', 'dlg2chat', 'chat2dlg', 'reply2dlg', 'dlg2reply']
+           'is_nameerr', 'task_tags', 'warning_tag', 'dlg2hist', 'dlg2chat', 'chat2dlg', 'reply2dlg', 'dlg2reply']
 
 # %% ../nbs/03_hist.ipynb #40ac6466
 import re, ast, base64, binascii, hashlib
@@ -221,6 +221,11 @@ def vars_hist(aim_info, ns=None):
     if vt.get('vars_bytes'): parts.extend(vt['vars_bytes'])
     if not parts: return []
     return [parts, 'Understood, I will use these variable values.']
+
+# %% ../nbs/03_hist.ipynb #32a32f0c
+def is_nameerr(v):
+    "Does an `eval_exprs` result mark an undefined name?"
+    return isinstance(v, str) and v.startswith('<error type="NameError"')
 
 # %% ../nbs/03_hist.ipynb #38b8eeea
 def task_tags(task: str, sid=None, time=None, tz='UTC'):
