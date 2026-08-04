@@ -17,7 +17,7 @@ import base64, copy, random, re, weakref
 from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
-from fastcore.ansi import strip_ansi
+from fastcore.ansi import strip_ansi, ansi2html
 from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES
 from .msg_parts import strip_tools as _strip_tools
 
@@ -387,12 +387,14 @@ def render_outputs_ai(outputs, renderers=None, dollars=False):
     return '\n'.join(render_output_ai(o, renderers=renderers, dollars=dollars) for o in concat_streams(outputs))
 
 # %% ../nbs/01_dialog.ipynb #11fded06
-def _render_md(out, html1st=True):
+def _render_md(out, html1st=True, ansi_html=False):
     "One output as a Markdown part: `('txt',s)` pools into a shared fence, `('md',s)` stands alone"
     mime,d = preferred_msg_out(out, html1st=html1st, include_imgs=True)
     d = join_out(d)
     if not d: return None
-    if   mime=='text/plain': return 'txt', strip_ansi(d)
+    if   mime=='text/plain':
+        if ansi_html and '\x1b[' in d: return 'md', f'<pre><code>{ansi2html(d)}</code></pre>'
+        return 'txt', strip_ansi(d)
     elif mime=='text/html': return 'md', fenced(d.strip(), '{=html}')
     elif mime=='application/javascript': return 'md', fenced(f'<script>{d}</script>', '{=html}')
     elif mime=='image/svg+xml': return 'md', fenced(d.strip(), '{=html}')
@@ -400,7 +402,7 @@ def _render_md(out, html1st=True):
     elif mime in IMG_MIMES: return 'md', f'![](data:{mime};base64,{"".join(d.split())})'
     return None
 
-def render_md(outputs, html1st=True):
+def render_md(outputs, html1st=True, ansi_html=False):
     "Render notebook outputs as Markdown: text to ``` fences, HTML in `{=html}`, markdown inlined, images as data URIs"
     if (not isinstance(outputs, (list,tuple))) or (outputs and not isinstance(outputs[0],dict)): return ''
     parts,buf = [],[]
@@ -408,7 +410,7 @@ def render_md(outputs, html1st=True):
         if (txt := ''.join(buf).rstrip()): parts.append(fenced(txt, 'output'))
         buf.clear()
     for out in concat_streams(outputs):
-        if not (r := _render_md(out, html1st=html1st)): continue
+        if not (r := _render_md(out, html1st=html1st, ansi_html=ansi_html)): continue
         k,s = r
         if k=='txt': buf.append(s if s.endswith('\n') else s+'\n')
         else:
