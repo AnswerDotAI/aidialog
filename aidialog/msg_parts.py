@@ -335,8 +335,7 @@ def tool_text(
 ):
     "Canonical string form of a tool result: `Part` lists render as text and `<media>` tags, dicts/lists as JSON, everything else via `str`"
     if isinstance(res, str): return res
-    if isinstance(res, list) and all(isinstance(o, Part) for o in res):
-        return '\n'.join(o.text or '' if isinstance(o, Text) else _media_tag(o) for o in res)
+    if isinstance(res, list) and all(isinstance(o, Part) for o in res): return '\n'.join(o.ctext for o in res)
     if isinstance(res, (dict, list)): return dumps(res, ensure_ascii=False, default=str)
     return str(res)
 
@@ -460,6 +459,13 @@ def formatted(self:ToolResult): return mk_tr_details(self)
 def doc(self:ToolResult, showthink=False, mx=2000):
     "A result with no id can't be re-parsed into history (e.g. Gemini code execution), so it doesn't render"
     return mk_tr_details(self, mx=mx).strip() if self.id else ''
+
+# %% ../nbs/00_msg_parts.ipynb #29e2b39b
+@patch(as_prop=True)
+def ctext(self:Part): return self.formatted
+
+@patch(as_prop=True)
+def ctext(self:Media): return _media_tag(self)
 
 # %% ../nbs/00_msg_parts.ipynb #e5acd16a
 def hist2fmt(msgs:list[Msg], mx=2000, showthink=False)->str:
