@@ -21,7 +21,7 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - `update_msg(id, ..., dlg=)` / `m.update(...)`: one transaction for a message's attributes. Plain keywords assign (`content=`, `msg_type=`, `output=`, `meta=` replacing wholesale); `mergemeta` deep-merges into `meta` (a `None` value deletes its key); `export` sets the nbdev directive -- `True` adds, `False` removes (there is no negative form), and either migrates a content-form `#| export` line to meta. The function returns a diff of the message's XML plus a `meta:` line, so every change it can make is visible.
-- The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`) or id prefixes, and `fname=` overrides the notebook for one call. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel; on error the `%nbrun` cell itself fails, after a header naming the failed cell.
+- The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`, `show`) or id prefixes, and `fname=` overrides the notebook for one call. Only cells named by id display their output: bulk-selected cells run silently (`show` overrides), errors always surface naming the failed cell, and the run ends with a `nbrun: N cells ok` line. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
 ## Idiomatic usage
@@ -46,12 +46,13 @@ __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replac
            'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
-import shlex, re, copy
+import shlex, re, copy, traceback
+from contextlib import redirect_stdout
 from fastcore.utils import *
 from fastcore.meta import splice_sig, delegates
 from fastcore.xtras import str_diff
 from fastcore.xml import to_xml
-from fastcore.nbio import item2xml, read_nb, select_cells, show_cell, Found
+from fastcore.nbio import item2xml, read_nb, select_cells, show_cell, exec_cell, Found
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace, lnhash
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
@@ -603,14 +604,27 @@ def add_msg_magic(line, cell):
 
 
 # %% ../nbs/04_dlgskill.ipynb #589da1bd
-_nbrun_flags = ('above','below','all','exported','skip_noeval','continue_on_error')
+_nbrun_flags = ('above','below','all','exported','skip_noeval','continue_on_error','show')
 
-async def _run_nb_cells(shell, ids, fname, stop=True, **kw):
-    "Run code cells of `fname` selected by `select_cells` in `shell`'s namespace, a `--- id ---` header before each"
+async def _run_nb_cells(shell, ids, fname, stop=True, show=False, **kw):
+    "Run code cells of `fname` selected by `select_cells` in `shell`'s namespace; only cells named in `ids` display, unless `show`"
     __tracebackhide__ = True
+    n,fails = 0,0
     for c in select_cells(read_nb(fname), *ids, **kw):
-        print(f'--- {c.id} ---')
-        await show_cell(shell, c.source, raise_exc=stop)
+        loud = show or any(str(c.id).startswith(p) for p in ids)
+        cap = None if loud else io.StringIO()
+        try:
+            if loud: await show_cell(shell, c.source)
+            else:
+                with redirect_stdout(cap): await exec_cell(shell, c.source)
+            n += 1
+        except Exception:
+            if cap: print(cap.getvalue(), end='')
+            print(f'nbrun: error in cell {c.id}')
+            if stop: raise
+            traceback.print_exc()
+            fails += 1
+    print(f'nbrun: {n} cell{"s"*(n!=1)} ok'+(f', {fails} failed' if fails else ''))
 
 def nbrun_magic(line):
     "Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides"
@@ -622,7 +636,8 @@ def nbrun_magic(line):
     fname = kw.pop('fname', None) or getattr(cur_dlg(), 'path_', None)
     if not fname: raise ValueError('No `fname` given and no current dialog file (`set_dlg`)')
     stop = not kw.pop('continue_on_error', False)
-    return _run_nb_cells(get_ipython(), ids, fname, stop, **kw)
+    show = bool(kw.pop('show', False))
+    return _run_nb_cells(get_ipython(), ids, fname, stop, show, **kw)
 
 # %% ../nbs/04_dlgskill.ipynb #56388a3a
 def load_ipython_extension(ipython):
