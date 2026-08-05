@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.9
+
+### New Features
+
+- nbrun: only display output of cells named by id, add `show` flag to force display ([#23](https://github.com/AnswerDotAI/aidialog/issues/23))
+- chat2dlg: deterministic message ids from meta uid or turn position, allow transcripts starting mid-conversation; move summary to dialog ([#22](https://github.com/AnswerDotAI/aidialog/issues/22))
+
+
 ## 0.0.8
 
 ### New Features
