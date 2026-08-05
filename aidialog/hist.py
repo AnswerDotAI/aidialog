@@ -21,7 +21,7 @@ from fastcore.utils import *
 from fastcore.xtras import detect_mime
 from fastcore.nbio import item2xml, IMG_MIMES
 from fastcore.xml import to_xml, Media, MediaUnavailable, Instructions, Prompt, Variable, Variables, System_reminder
-from .msg_parts import MediaUrl, fmt2hist, hist2fmt, data_url, Msg, mk_tr_details, PartType, Part, _mk_content
+from .msg_parts import MediaUrl, fmt2hist, hist2fmt, data_url, Msg, mk_tr_details, PartType, Part, mk_content
 from .dialog import *
 
 # %% ../nbs/03_hist.ipynb #b2c5d115
@@ -147,7 +147,7 @@ def _img_output(m, aim_info, max_im_sz):
 def output_parts(m, aim_info=None, max_im_sz=None):
     "Media `Part`s for a code message's outputs: gated, resized, id-tagged, with unavailable fallbacks; images enabled if `aim_info` is None"
     if aim_info is None: aim_info = dict(supports_vision=True)
-    return [_mk_content(o) for o in _img_output(m, aim_info, max_im_sz)]
+    return [mk_content(o) for o in _img_output(m, aim_info, max_im_sz)]
 
 def merge_media(text, parts):
     "Compose rendered `text` with media `parts`: media first (tag adjacency kept), text last; with no images, notes fold into the text"
@@ -321,7 +321,7 @@ def dlg2chat(
     hist = dlg2hist(dlg, dict(supports_vision=True) if aim_info is None else aim_info)
     msgs = []
     for i,t in enumerate(hist):
-        if i%2==0: msgs.append(Msg('user', [_mk_content(o) for o in t]))
+        if i%2==0: msgs.append(Msg('user', [mk_content(o) for o in t]))
         else: msgs += _seq_tools(fmt2hist(t))
     ids = [p.data['id'] for m in msgs for p in m.content if p.type==PartType.tool_use]
     if dups := {i for i in ids if ids.count(i)>1}: raise ValueError(f"duplicate tool call id(s): {', '.join(sorted(dups))}")
