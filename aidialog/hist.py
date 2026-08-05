@@ -340,8 +340,8 @@ def chat2dlg(
     for m in msgs:
         if m.role=='user': turns.append((m,[]))
         elif turns: turns[-1][1].append(m)
-        else: raise ValueError('msgs must start with a user message')
-    for u,replies in turns:
+        else: turns.append((Msg('user', []), [m]))
+    for i,(u,replies) in enumerate(turns):
         segs,atts = [],[]
         for p in u.content:
             if isinstance(p, Text): segs.append(p.text)
@@ -350,7 +350,10 @@ def chat2dlg(
                 atts.append(Attachment(base64.b64decode(data), mime))
                 segs.append(f'![](attachment:{atts[-1].id})')
             else: raise ValueError(f'unsupported user part: {p.type}')
-        kw = {}
+        meta = getattr(u, 'meta', None)
+        uid = (meta or {}).get('uid') or f'{name}\x1f{i}'
+        kw = dict(id=hashlib.md5(uid.encode()).hexdigest()[:8])
+        if meta: kw['meta'] = meta
         if segs and (mt := _env_pat.search(segs[-1])):
             segs[-1] = segs[-1][:mt.start()] + mt['task']
             if mt['sid']: kw['id'] = mt['sid']

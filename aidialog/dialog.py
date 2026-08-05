@@ -89,6 +89,15 @@ class Dialog(BasicRepr):
 
 add_id_hash(Dialog, 'name')
 
+# %% ../nbs/01_dialog.ipynb #3171584d
+@patch
+def summary(self:Dialog,
+    maxlen:int=120, # Maximum characters per line
+):
+    "One `preview` per message: `id:t:content` (t: c=code n=note p=prompt r=raw), plus a `> ` line for a prompt's reply"
+    return self.messages.show(maxlen)
+
+
 # %% ../nbs/01_dialog.ipynb #579ba71b
 def mk_output(typ, d, meta=None, **kw): return dict(output_type=typ, metadata=meta or {}, data=d, **kw)
 def mk_displayobj(d, meta=None): return mk_output('display_data', d, meta)

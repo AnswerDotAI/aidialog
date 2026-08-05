@@ -96,13 +96,6 @@ def msg(self:Dialog,
     return self.messages[id.id if isinstance(id, Message) else id]
 
 # %% ../nbs/04_dlgskill.ipynb #def6dd98
-@patch
-def summary(self:Dialog,
-    maxlen:int=120, # Maximum characters per line
-):
-    "One `preview` per message: `id:t:content` (t: c=code n=note p=prompt r=raw), plus a `> ` line for a prompt's reply"
-    return self.messages.show(maxlen)
-
 def summary_dlg(
     dlg=None, # An ipynb path; the current dialog file if None
     maxlen:int=120, # Maximum characters per line
