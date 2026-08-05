@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.0.8
+
+### New Features
+
+- Part subclasses replace Part/ToolCall, id-indexed find results with context marks, and new `update_msg` transaction ([#21](https://github.com/AnswerDotAI/aidialog/issues/21))
+- Export `mk_content`, `mk_result_fence`, `split_fence_msgs` and `trunc_str` publicly; add `extract_fence_call`, Part.formatted, and showthink/pending-tool rendering in hist2fmt ([#20](https://github.com/AnswerDotAI/aidialog/issues/20))
+- Add `is_nameerr` helper to hist for detecting NameError results from `eval_exprs` ([#19](https://github.com/AnswerDotAI/aidialog/issues/19))
+
+
 ## 0.0.7
 
 ### New Features
