@@ -21,7 +21,7 @@ from fastcore.utils import *
 from fastcore.xtras import detect_mime
 from fastcore.nbio import item2xml, IMG_MIMES
 from fastcore.xml import to_xml, Media, MediaUnavailable, Instructions, Prompt, Variable, Variables, System_reminder
-from .msg_parts import MediaUrl, fmt2hist, hist2fmt, data_url, Msg, mk_tr_details, PartType, Part, mk_content
+from .msg_parts import MediaUrl, fmt2hist, hist2fmt, data_url, Msg, mk_tr_details, PartType, Part, Text, Thinking, ToolUse, ToolResult, InputImage, mk_content
 from .dialog import *
 
 # %% ../nbs/03_hist.ipynb #b2c5d115
@@ -151,9 +151,9 @@ def output_parts(m, aim_info=None, max_im_sz=None):
 
 def merge_media(text, parts):
     "Compose rendered `text` with media `parts`: media first (tag adjacency kept), text last; with no images, notes fold into the text"
-    has_img = any(p.type==PartType.input_image for p in parts)
+    has_img = any(isinstance(p, InputImage) for p in parts)
     if not has_img: return '\n\n'.join(filter(None, [text, *(p.text for p in parts)]))
-    return [*parts, *([Part(type=PartType.text, text=text)] if text else [])]
+    return [*parts, *([Text(text)] if text else [])]
 
 # %% ../nbs/03_hist.ipynb #1e8a1f1b
 @patch
@@ -296,12 +296,12 @@ def dlg2hist(
 # %% ../nbs/03_hist.ipynb #22d1bb97
 def _explode(a, t):
     "One call/result pair per tool use in a batched assistant/tool pair"
-    tus = [p for p in a.content if p.type==PartType.tool_use]
+    tus = [p for p in a.content if isinstance(p, ToolUse)]
     if len(tus)<2: return [a,t]
-    pre,trs = [p for p in a.content if p.type!=PartType.tool_use],{p.data['id']:p for p in t.content}
+    pre,trs = [p for p in a.content if not isinstance(p, ToolUse)],{p.id:p for p in t.content}
     res = []
     for is_first,tu in loop_first(tus):
-        res += [Msg(role='assistant', content=(pre if is_first else [])+[tu]), Msg(role='tool', content=[trs[tu.data['id']]])]
+        res += [Msg(role='assistant', content=(pre if is_first else [])+[tu]), Msg(role='tool', content=[trs[tu.id]])]
     return res
 
 def _seq_tools(msgs):
@@ -323,7 +323,7 @@ def dlg2chat(
     for i,t in enumerate(hist):
         if i%2==0: msgs.append(Msg('user', [mk_content(o) for o in t]))
         else: msgs += _seq_tools(fmt2hist(t))
-    ids = [p.data['id'] for m in msgs for p in m.content if p.type==PartType.tool_use]
+    ids = [p.id for m in msgs for p in m.content if isinstance(p, ToolUse)]
     if dups := {i for i in ids if ids.count(i)>1}: raise ValueError(f"duplicate tool call id(s): {', '.join(sorted(dups))}")
     return msgs
 
@@ -344,8 +344,8 @@ def chat2dlg(
     for u,replies in turns:
         segs,atts = [],[]
         for p in u.content:
-            if p.type==PartType.text: segs.append(p.text)
-            elif p.type==PartType.input_image:
+            if isinstance(p, Text): segs.append(p.text)
+            elif isinstance(p, InputImage):
                 mime,data = data_url(p.text)
                 atts.append(Attachment(base64.b64decode(data), mime))
                 segs.append(f'![](attachment:{atts[-1].id})')
@@ -364,17 +364,16 @@ def reply2dlg(pmsg):
     sub = Dialog(name=pmsg.id)
     sub.msg_cls = type(pmsg)
     msgs = fmt2hist(pmsg.ai_res)
-    trs = {p.data['id']:p for m in msgs if m.role=='tool' for p in m.content}
+    trs = {p.id:p for m in msgs if m.role=='tool' for p in m.content}
     for m in msgs:
         if m.role=='tool': continue
         for p in m.content:
-            if p.type==PartType.tool_use:
-                d = p.data
-                if not _dotted_name(d['name']): raise ValueError(f"not a dotted Python identifier: {d['name']}")
-                if bad := first(k for k in d['arguments'] if not k.isidentifier()): raise ValueError(f"not a Python identifier: {bad}")
-                args = ', '.join(f'{k}={v!r}' for k,v in d['arguments'].items())
-                sub.mk_message(f"{d['name']}({args})", output=code_output(trs[d['id']].text), meta=dict(tool_id=d['id']))
-            elif p.type==PartType.text and p.text: sub.mk_message(p.text, msg_type=snote)
+            if isinstance(p, ToolUse):
+                if not _dotted_name(p.name): raise ValueError(f"not a dotted Python identifier: {p.name}")
+                if bad := first(k for k in p.arguments if not k.isidentifier()): raise ValueError(f"not a Python identifier: {bad}")
+                args = ', '.join(f'{k}={v!r}' for k,v in p.arguments.items())
+                sub.mk_message(f"{p.name}({args})", output=code_output(trs[p.id].text), meta=dict(tool_id=p.id))
+            elif isinstance(p, Text) and p.text: sub.mk_message(p.text, msg_type=snote)
     return sub
 
 # %% ../nbs/03_hist.ipynb #980f65be
@@ -391,7 +390,7 @@ def _msg2tr(m):
     "Tool-result `Part` recovered from code message `m`, whose source is the literal call"
     if (p := _parse_call(m.content)) is None: raise ValueError(f"not a keyword-only tool call: {m.content!r}")
     tid = m.meta.setdefault('tool_id', 'call_'+rtoken_hex(8))
-    return Part(type=PartType.tool_result, text=render_outputs_ai(m.output or []), data=dict(id=tid, name=p[0], arguments=p[1]))
+    return ToolResult(id=tid, name=p[0], arguments=p[1], text=render_outputs_ai(m.output or []))
 
 def dlg2reply(sub):
     "Implode a sub-dialog of note and code messages back into reply markdown"

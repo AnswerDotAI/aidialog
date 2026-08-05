@@ -18,7 +18,7 @@ from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES
+from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES,deep_merge,find_id,Found
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -38,14 +38,17 @@ def add_id_hash(cls, attr):
 
 # %% ../nbs/01_dialog.ipynb #352b878b
 class Msgs(L):
-    "A list of `Message`s with a `preview` repr"
+    "A list of `Message`s with a `preview` repr; index by position, or by message id (exact or unique prefix)"
+    def __getitem__(self, k): return find_id(self, k, 'message') if isinstance(k, str) else super().__getitem__(k)
+
+    def _sep(self, m): return ':'
     def show(self,
         maxlen:int=120, # Maximum characters per preview line
         rows:int=None, # Max messages to show (None: all)
     ):
         "One `preview` per message: a row line, plus a reply line for prompts"
-        xs = self if rows is None else self[:rows]
-        res = '\n'.join(m.preview(maxlen) for m in xs)
+        xs = list(self) if rows is None else list(self)[:rows]
+        res = '\n'.join(m.preview(maxlen, sep=self._sep(m)) for m in xs)
         if rows is not None and len(self)>rows: res += f'\n…({len(self)-rows} more)'
         return PrettyString(res)
 
@@ -203,35 +206,29 @@ def _prev_line(txt, maxlen, pre=''):
 @patch
 def preview(self:Message,
     maxlen:int=120, # Maximum characters per line
+    sep:str=':', # Separator before the content; a find shows `-` on context rows
 ):
     "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead"
     txt = self.content or (f"<{self.meta['rec_kind']}>" if self.meta.get('rec_kind') else '')
-    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}:")
+    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}{sep}")
     if self.msg_type==sprompt and self.ai_res: return res + '\n' + _prev_line(self.ai_res, maxlen, '> ')
     if self.output: res += f" ⇒ out({humanize(len(str(self.output)))})"
     return res
 
 # %% ../nbs/01_dialog.ipynb #a72644ce
 class MsgRow:
-    "Snapshot of one message: `id`, `msg_type`, `content`, `out` (reply or output text), and `meta`; shown as its preview"
-    def __init__(self, m, maxlen=120):
-        self.id,self.msg_type,self.content = m.id,m.msg_type,m.content
+    "Snapshot of one message: `id`, `msg_type`, `content`, `out` (reply or output text), and `meta`; shown as its preview, with `-` in place of the first `:` on a context row"
+    def __init__(self, m, maxlen=120, kind='match'):
+        self.id,self.msg_type,self.content,self.kind = m.id,m.msg_type,m.content,kind
         self.meta = copy.deepcopy(m.meta)
         self.out = (m.ai_res or '') if m.msg_type==sprompt else str(m.output or '')
-        self._pv = m.preview(maxlen)
+        self._pv = m.preview(maxlen, sep=':' if kind=='match' else '-')
     def __repr__(self): return self._pv
 
-class MsgRows(L):
-    "A list of `MsgRow`s, shown as their previews"
+class MsgRows(Found, L):
+    "Find-result `MsgRow`s: index by message id (exact or unique prefix), never by position"
+    _unit = 'message'
     def __repr__(self): return '\n'.join(repr(o) for o in self)
-
-# %% ../nbs/01_dialog.ipynb #e4fb159d
-@patch
-def update(self:Message, **kwargs):
-    "Update message attributes with provided keyword arguments"
-    for k, v in kwargs.items():
-        if v is not UNSET: setattr(self, k, v)
-    return self
 
 # %% ../nbs/01_dialog.ipynb #a0465cdb
 @patch
@@ -523,6 +520,26 @@ Message.meta_exported = property(_get_mexp, _set_mexp,
 def dlg2py(dlg):
     "The exported code of `dlg`, as a python source string"
     return '\n\n'.join(m.content for m in dlg.messages if m.msg_type==scode and m.exported)
+
+# %% ../nbs/01_dialog.ipynb #e4fb159d
+@patch
+def update(self:Message,
+    mergemeta:dict=None, # `deep_merge` into `meta`; a `None` value deletes its key
+    export:bool=None, # Add (True) or remove (False) the nbdev export directive; a content-form line migrates to meta
+    **kwargs, # Attributes to assign, e.g. `content=`, `msg_type=`, `output=`, or `meta=` (replacing it wholesale)
+):
+    "Update this message's attributes; returns self"
+    for k, v in kwargs.items():
+        if v is not UNSET: setattr(self, k, v)
+    if mergemeta is not None: self.meta = deep_merge(self.meta, mergemeta)
+    if export is not None:
+        c = mk_cell(self.content)
+        d = c.directives
+        if d.pop('export', None) is not None or d.pop('exports', None) is not None:
+            c.directives = d
+            self.content = c.source
+        self.meta_exported = export
+    return self
 
 # %% ../nbs/01_dialog.ipynb #0db3221b
 _re_exp = re.compile(r'#\|\s*exports?[^\n]*\n')

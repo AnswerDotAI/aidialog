@@ -17,9 +17,10 @@ Dropping a level is correct exactly when the question is about the representatio
 The function/method two-shapes contract is `fastcore.editskill`'s, learned once: the function is a transaction addressed by `dlg=` (an ipynb path, or None meaning the current dialog file: `set_dlg`); the method is a session on a held `Dialog` or `Message`, saved by an explicit `dlg.save()` (`msg_str_replace(id, ..., dlg=p)` ⟷ `m.str_replace(...)`). Wrapping any message list in an ephemeral `Dialog(msgs)` makes the whole session surface available on it.
 
 - `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket, as in nbio's `CellRow`, shows meta-form nbdev directives such as `[export]`), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
-- `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 (the neighbouring message usually explains the match). Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews. `d.find_msgs(...)` returns live `Message` objects in a `Msgs` list instead, edited directly rather than re-addressed. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
+- `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 even with `ids=`, because the neighbouring message usually explains the match -- retrieve and read it. Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`) in a `MsgRows`; `d.find_msgs(...)` returns live `Message`s in a `FoundMsgs`. Both index by message id (exact or unique prefix) and refuse integer positions: a find result includes context rows, so `[0]` may be a neighbour of the match, and the raised error teaches the id idiom. Previews mark context rows with `-` in place of the first `:`. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
+- `update_msg(id, ..., dlg=)` / `m.update(...)`: one transaction for a message's attributes. Plain keywords assign (`content=`, `msg_type=`, `output=`, `meta=` replacing wholesale); `mergemeta` deep-merges into `meta` (a `None` value deletes its key); `export` sets the nbdev directive -- `True` adds, `False` removes (there is no negative form), and either migrates a content-form `#| export` line to meta. The function returns a diff of the message's XML plus a `meta:` line, so every change it can make is visible.
 - The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`) or id prefixes, and `fname=` overrides the notebook for one call. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel; on error the `%nbrun` cell itself fails, after a header naming the failed cell.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
@@ -39,10 +40,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
 # %% auto #0
 __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_ast_replace',
-           'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'find_msgs',
-           'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
+           'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'FoundMsgs',
+           'find_msgs', 'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
            'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
+           'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -50,7 +51,7 @@ from fastcore.utils import *
 from fastcore.meta import splice_sig, delegates
 from fastcore.xtras import str_diff
 from fastcore.xml import to_xml
-from fastcore.nbio import item2xml, read_nb, select_cells, show_cell
+from fastcore.nbio import item2xml, read_nb, select_cells, show_cell, Found
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace, lnhash
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
@@ -92,11 +93,7 @@ def msg(self:Dialog,
     id, # A `Message` (matched by its id), or an id: exact, or unique prefix
 ):
     "The matching `Message` in this dialog"
-    if isinstance(id, Message): id = id.id
-    ms = [m for m in self.messages if m.id==id]
-    if not ms: ms = [m for m in self.messages if m.id.startswith(id)]
-    if len(ms) != 1: raise KeyError(f"{'ambiguous' if ms else 'no'} message id: {id!r}")
-    return ms[0]
+    return self.messages[id.id if isinstance(id, Message) else id]
 
 # %% ../nbs/04_dlgskill.ipynb #def6dd98
 @patch
@@ -196,6 +193,12 @@ def view_msgs(
     d = _to_dlg(dlg)
     return PrettyString('\n'.join(f"# msg {(m := d.msg(i)).id}\n{m.view(nums, lnhashs=lnhashs, incl_out=incl_out, trunc_out=trunc_out)}" for i in ids))
 
+# %% ../nbs/04_dlgskill.ipynb #4c3b9190
+class FoundMsgs(Found, Msgs):
+    "Find results: live messages indexed by id (exact or unique prefix), never by position; context rows show `-` in place of their first `:`"
+    _unit = 'message'
+    def _sep(self, m): return ':' if self.kind(m)=='match' else '-'
+
 # %% ../nbs/04_dlgskill.ipynb #4bf78327
 def _match_head(m, want):
     "Does `m` head the section `want` names? Exact first line when `want` starts with '#', hash-stripped text otherwise"
@@ -220,7 +223,7 @@ def find_msgs(self:Dialog,
     headers_only:bool=False, # Only heading notes (an outline view)?
     header_section:str=None, # Return the section starting with this heading, plus its children
     pred:callable=None, # Extra match criterion, e.g. from `symdef_finder`/`symref_finder`/`ast_finder`, or host-specific flags
-)->Msgs: # Live messages, so results can be edited directly
+)->FoundMsgs: # Live messages plus context rows, indexed by id, so results can be edited directly
     "Find this dialog's messages matching all the given criteria"
     ms = self.messages
     if context is None: context = 0 if headers_only else 1
@@ -246,20 +249,22 @@ def find_msgs(self:Dialog,
         return not pat or bool(pat.search(_txt(m)))
     hits = [i for i,m in enumerate(ms) if _ok(m)]
     if limit is not None: hits = hits[:limit]
+    matched = {ms[i].id for i in hits}
     if before or after:
         keep = set()
         for i in hits: keep.update(range(max(0,i-before), min(len(ms), i+after+1)))
         hits = sorted(keep)
-    return Msgs([ms[i] for i in hits])
+    return FoundMsgs([ms[i] for i in hits], matched=matched)
 
 @delegates(Dialog.find_msgs)
 def find_msgs(
     re_pattern:str='', # Regex over content (a prompt's reply included), DOTALL+MULTILINE; an invalid regex matches literally
     dlg=None, # An ipynb path; the current dialog file if None
     **kwargs,
-)->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), shown as previews
+)->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), indexed by id and shown as previews with context rows marked
     "Find messages in the dialog file matching all the given criteria; for live results, call `Dialog.find_msgs`"
-    return MsgRows(MsgRow(m) for m in _to_dlg(dlg).find_msgs(re_pattern, **kwargs))
+    fm = _to_dlg(dlg).find_msgs(re_pattern, **kwargs)
+    return MsgRows(MsgRow(m, kind='match' if m.id in fm.matched else 'context') for m in fm)
 
 # %% ../nbs/04_dlgskill.ipynb #1afa6ffc
 @patch
@@ -574,6 +579,22 @@ def create_dlg(
     write_ipynb(d, f)
     d.path_ = f
     return d
+
+# %% ../nbs/04_dlgskill.ipynb #96d9eca6
+@delegates(Message.update)
+def update_msg(
+    id, # A `Message`, or an id: exact, or unique prefix
+    dlg=None, # An ipynb path; the current dialog file if None
+    **kwargs,
+):
+    "Update a message's type, meta, or export directive in the dialog file (see `Message.update`)"
+    d = _to_dlg(dlg)
+    m = d.msg(id)
+    def _snap(): return f"{to_xml(msg2xml(m))}\nmeta: {dict(sorted(m.meta.items()))}"
+    before = _snap()
+    m.update(**kwargs)
+    _save(d)
+    return PrettyString(str_diff(before, _snap()) or 'none: No changes.')
 
 # %% ../nbs/04_dlgskill.ipynb #fb670f10
 def add_msg_magic(line, cell):
