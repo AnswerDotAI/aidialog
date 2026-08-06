@@ -7,7 +7,8 @@ Docs: https://AnswerDotAI.github.io/aidialog/hist.html.md"""
 # %% auto #0
 __all__ = ['UNSUPPORTED_MSG', 'im_max', 'IMG_TOKS', 'expr_pat', 'expr_mtypes', 'jwrap', 'to_local_time', 'media_item',
            'resize_img', 'output_parts', 'merge_media', 'get_refs', 'sigil_pat', 'get_exprs', 'vars_tag', 'vars_hist',
-           'is_nameerr', 'task_tags', 'warning_tag', 'dlg2hist', 'dlg2chat', 'chat2dlg', 'reply2dlg', 'dlg2reply']
+           'is_nameerr', 'task_tags', 'warning_tag', 'dlg2hist', 'reply2chat', 'dlg2chat', 'chat2dlg', 'reply2dlg',
+           'dlg2reply']
 
 # %% ../nbs/03_hist.ipynb #40ac6466
 import re, ast, base64, binascii, hashlib
@@ -281,6 +282,7 @@ def to_parts(self:Message, aim_info:dict, last=False):
 def dlg2hist(
     dlg, # A `Dialog`, or iterable of messages, ending with a prompt
     aim_info:dict, # Model capability dict for media handling
+    plain:bool=False, # Render prompts as bare content, without the serving envelope?
 ):
     "Convert `dlg` to LLM history. The final prompt renders with `last=True`."
     msgs = dlg.messages if isinstance(dlg, Dialog) else list(dlg)
@@ -289,7 +291,7 @@ def dlg2hist(
     if msgs[-1].msg_type != sprompt: raise ValueError("dlg2hist requires the messages to end with a prompt")
     res = []
     for is_first, m in loop_first(reversed(msgs)):
-        if m.msg_type == sprompt: res += [m.ai_output, m.to_parts(aim_info, last=is_first)]
+        if m.msg_type == sprompt: res += [m.ai_output, (m.to_media(aim_info) or [])+[m.content] if plain else m.to_parts(aim_info, last=is_first)]
         else: res[-1] = m.to_parts(aim_info) + res[-1]
     return res[::-1]
 
@@ -312,17 +314,23 @@ def _seq_tools(msgs):
         else: out.append(m)
     return out
 
+# %% ../nbs/03_hist.ipynb #785becef
+def reply2chat(outp:str)->list[Msg]:
+    "Chat messages for a stored reply: `fmt2hist`-parsed parts in strict call/result alternation"
+    return _seq_tools(fmt2hist(outp))
+
 # %% ../nbs/03_hist.ipynb #4eccdf09
 def dlg2chat(
     dlg, # A `Dialog`, ending with a prompt
     aim_info=None, # Model capability dict for media handling; images enabled if None
+    plain=False, # Render prompts as bare content, without the serving envelope?
 ):
     "Canonical chat messages for `dlg`, with each reply's tool calls recovered as real parts"
-    hist = dlg2hist(dlg, dict(supports_vision=True) if aim_info is None else aim_info)
+    hist = dlg2hist(dlg, dict(supports_vision=True) if aim_info is None else aim_info, plain=plain)
     msgs = []
     for i,t in enumerate(hist):
         if i%2==0: msgs.append(Msg('user', [mk_content(o) for o in t]))
-        else: msgs += _seq_tools(fmt2hist(t))
+        else: msgs += reply2chat(t)
     ids = [p.id for m in msgs for p in m.content if isinstance(p, ToolUse)]
     if dups := {i for i in ids if ids.count(i)>1}: raise ValueError(f"duplicate tool call id(s): {', '.join(sorted(dups))}")
     return msgs
