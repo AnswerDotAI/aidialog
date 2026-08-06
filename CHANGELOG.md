@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.10
+
+### New Features
+
+- Replace dataclasses with BasicRepr/`store_attr` in `msg_parts`; move Completion, `mk_msg`, `mk_msgs` from fastllm ([#25](https://github.com/AnswerDotAI/aidialog/issues/25))
+- clarify that dlg path expands ~ in docstrings ([#24](https://github.com/AnswerDotAI/aidialog/pull/24)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.0.9
 
 ### New Features
