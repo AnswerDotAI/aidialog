@@ -7,57 +7,67 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'fence_call_re', 'Part', 'Text',
            'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputVideo', 'InputFile', 'mk_part', 'Msg',
-           'ToolUse', 'ToolResult', 'ServerToolResult', 'display_list', 'mk_tool_res_msg', 'sys_text', 'part_txt',
-           'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
+           'ToolUse', 'ToolResult', 'ServerToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
+           'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
            'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
-           'StopResponse', 'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt']
+           'StopResponse', 'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
-import base64, json
+import base64, json, copy
 from json import dumps
-from dataclasses import dataclass, field, fields, replace
 from fastcore.utils import *
 from fastcore.xtras import detect_mime
 
 # %% ../nbs/00_msg_parts.ipynb #2212704a
-@dataclass
-class Part:
+class Part(BasicRepr):
     "Base class for content parts; subclasses register under the wire tag they serialize as."
-    raw: dict = field(default=None, kw_only=True)           # The vendor's original block, kept for lossless round-trips
-    cache_control: dict = field(default=None, kw_only=True) # Prompt-cache directive for providers that take one
-    text = None    # subclasses that carry text declare it as a field; the rest read as None
+    text = None    # subclasses that carry text declare it as an attribute; the rest read as None
     reg = {}       # wire tag -> subclass
+    def __init__(self,
+        *,
+        raw=None,          # The vendor's original block, kept for lossless round-trips
+        cache_control=None # Prompt-cache directive for providers that take one
+    ):
+        store_attr()
     def __init_subclass__(cls, tag=None, **kw):
         super().__init_subclass__(**kw)
         if tag: cls.type,Part.reg[tag] = tag,cls
+    def __eq__(self, o): return type(o) is type(self) and self.__dict__ == o.__dict__
+    def __hash__(self): return hash((type(self).__name__, self.text))
+    def replace(self, **kw):
+        "A copy of this part with `kw` attributes changed"
+        res = copy.copy(self)
+        res.__dict__.update(kw)
+        return res
 
 # %% ../nbs/00_msg_parts.ipynb #5342db55
 PartType = str_enum('PartType', 'text', 'thinking', 'refusal', 'tool_use', 'server_tool_result', 'tool_result',
                     'input_image', 'input_audio', 'input_video', 'input_file')
 
 # %% ../nbs/00_msg_parts.ipynb #48496c08
-@dataclass
 class Text(Part, tag=PartType.text):
     "Plain text content."
-    text: str = None
-    citations: list = None
+    def __init__(self, text=None, citations=None, **kw):
+        super().__init__(**kw)
+        store_attr('text,citations')
 
-@dataclass
 class Thinking(Part, tag=PartType.thinking):
     "A reasoning block; `showthink` asks renderers to show the thought rather than a 🧠 glyph."
-    text: str = None
-    showthink: bool = False
+    def __init__(self, text=None, showthink=False, **kw):
+        super().__init__(**kw)
+        store_attr('text,showthink')
 
-@dataclass
 class Refusal(Part, tag=PartType.refusal):
     "A provider's refusal to answer."
-    text: str = None
+    def __init__(self, text=None, **kw):
+        super().__init__(**kw)
+        store_attr('text')
 
-@dataclass
 class Media(Part):
     "Media content: `text` is a URL or data URL."
-    text: str = None
-    mime: str = None
+    def __init__(self, text=None, mime=None, **kw):
+        super().__init__(**kw)
+        store_attr('text,mime')
 
 class InputImage(Media, tag=PartType.input_image): "An image input."
 class InputAudio(Media, tag=PartType.input_audio): "An audio input."
@@ -78,26 +88,31 @@ def _trunc_strs(o, n=200):
 
 @patch
 def _repr_markdown_(self:Part):
-    flds = '\n'.join(f"- {f.name}: `{_trunc_strs(getattr(self,f.name))}`" for f in fields(self) if f.name not in ('text','cache_control'))
+    flds = '\n'.join(f"- {k}: `{_trunc_strs(getattr(self,k))}`" for k in self.__stored_args__ if k not in ('text','cache_control'))
     return f"""**{type(self).__name__}** (`{self.type}`)
 
 {_trunc_strs(self.text) if self.text else ''}
 
-<details markdown='1'>
+::: details
 
 {flds}
 
-</details>"""
+:::"""
 
 # %% ../nbs/00_msg_parts.ipynb #ae349c18
-@dataclass
-class Msg:
+class Msg(BasicRepr):
     "A normalized message."
-    role: str
-    content: List[Part]
+    def __init__(self,
+        role,   # 'user', 'assistant', or 'tool'
+        content # list of `Part`
+    ):
+        store_attr()
 
     @property
     def text(self): return ''.join(p.text or '' for p in self.content if isinstance(p, Text))
+
+    def __eq__(self, o): return type(o) is type(self) and self.__dict__ == o.__dict__
+    def __hash__(self): return hash((self.role, len(self.content)))
 
     def _repr_markdown_(self):
         return f"""**Msg**
@@ -111,38 +126,51 @@ class Msg:
 </contents>"""
 
 # %% ../nbs/00_msg_parts.ipynb #3cbac5be
-@dataclass
 class _ToolPart(Part):
     "Shared shape of a tool call and its result."
-    id: str = None
-    name: str = None
-    arguments: dict = field(default_factory=dict)
-    server: bool = False
-    text: str = None
+    def __init__(self, id=None, name=None, arguments=None, server=False, text=None, **kw):
+        super().__init__(**kw)
+        store_attr('id,name,arguments,server,text')
+        self.arguments = ifnone(arguments, {})
 
 class ToolUse  (_ToolPart, tag=PartType.tool_use   ): "A tool invocation; `server` marks one the provider ran itself."
 class ToolResult(_ToolPart, tag=PartType.tool_result): "A tool call's result, `text` holding the output."
-@dataclass
 class ServerToolResult(Part, tag=PartType.server_tool_result):
     "A provider-side tool result, kept as `raw` for round-trips."
-    text: str = None
+    def __init__(self, text=None, **kw):
+        super().__init__(**kw)
+        store_attr('text')
 
 # %% ../nbs/00_msg_parts.ipynb #195b4d89
 @patch
 def _repr_markdown_(self:ToolUse):
     return f"""🔧 **{self.name}**(`{self.arguments}`)
 
-<details markdown='1'>
+::: details
 
 - id: `{self.id}`
 - server: `{self.server}`
 - raw: `{_trunc_strs(self.raw)}`
 
-</details>"""
+:::"""
 
 def display_list(l): 
     from IPython.display import Markdown, display
     display(Markdown('\n\n'.join(o._repr_markdown_() for o in l)))
+
+# %% ../nbs/00_msg_parts.ipynb #0168c535
+class Completion(BasicRepr):
+    "Normalized completion response."
+    def __init__(self, model, message, finish_reason=None, usage=None, api_name=None, vendor_name=None, raw=None):
+        store_attr()
+        self.raw = ifnone(raw, {})
+    def __eq__(self, o): return type(o) is type(self) and self.__dict__ == o.__dict__
+    def __hash__(self): return hash((self.model, self.finish_reason, self.api_name, self.vendor_name))
+
+    @property
+    def tool_calls(self):
+        "The `ToolUse` parts of `message`: a call lives in the content, not beside it"
+        return [p for p in self.message.content if isinstance(p, ToolUse)]
 
 # %% ../nbs/00_msg_parts.ipynb #7c88fce1
 def mk_tool_res_msg(tool_calls:list[ToolUse], results:list[str|list]):
@@ -381,9 +409,10 @@ def fmt2hist(outp:str)->list[Msg]:
     return result
 
 # %% ../nbs/00_msg_parts.ipynb #6fe280ec
-@dataclass
-class ToolResponse:
-    content: list[str,str]
+class ToolResponse(BasicRepr):
+    def __init__(self, content): store_attr()  # list of (text, result) pairs
+    def __eq__(self, o): return type(o) is type(self) and self.__dict__ == o.__dict__
+    def __hash__(self): return hash(str(self.content))
 
 # %% ../nbs/00_msg_parts.ipynb #86265805
 class StopResponse(str): pass
@@ -443,7 +472,7 @@ def formatted(self:Thinking): return (self.text or '') if self.showthink else '�
 @patch
 def doc(self:Thinking, showthink=False, mx=2000):
     if not (showthink and self.text): return ''
-    return f'{think_start}\n<details><summary>Thinking</summary>\n\n{self.text.strip()}\n\n</details>\n{think_end}'
+    return f'{think_start}\n::: details\n\n## Thinking\n\n{self.text.strip()}\n\n:::\n{think_end}'
 
 @patch(as_prop=True)
 def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summary(self)} ⏳\n"
@@ -451,7 +480,7 @@ def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summar
 def doc(self:ToolUse, showthink=False, mx=2000):
     "A server call's result is implicit, so it renders as a completed block; any other pending call is an ⏳ row"
     if not self.server: return self.formatted.strip()
-    return mk_tr_details(replace(self, text='Server tool call executed.'), mx=mx).strip()
+    return mk_tr_details(self.replace(text='Server tool call executed.'), mx=mx).strip()
 
 @patch(as_prop=True)
 def formatted(self:ToolResult): return mk_tr_details(self)
@@ -480,7 +509,36 @@ def hist2fmt(msgs:list[Msg], mx=2000, showthink=False)->str:
             for p in m.content:
                 if not isinstance(p, ToolResult): continue
                 tu = tus.pop(p.id, None)                       # results don't carry the call's arguments
-                out.append(replace(p, arguments=tu.arguments if tu else {}).doc(mx=mx))
+                out.append(p.replace(arguments=tu.arguments if tu else {}).doc(mx=mx))
         else: raise ValueError(f"hist2fmt renders assistant and tool messages only, got {m.role!r}")
     out += [p.doc() for p in tus.values()]                     # calls still awaiting a result
     return '\n\n'.join(o for o in out if o)
+
+# %% ../nbs/00_msg_parts.ipynb #d002a3ed
+def mk_msg(
+    content,      # Content: str, bytes (image), list of mixed content, or dict w 'role' and 'content' fields
+    role="user"    # Message role if content isn't already a dict/Message
+):
+    "Create a LiteLLM compatible message."
+    if content is None: return None
+    if isinstance(content, Msg): return content
+    if isinstance(content, Completion): return content.message
+    if isinstance(content, list) and len(content) == 1 and isinstance(content[0], str): parts = [Text(content[0])]
+    elif isinstance(content, list): parts = [mk_content(o) for o in content]
+    elif isinstance(content, dict): return Msg(role=content['role'], content=[Text(content['content'])])
+    else: parts = [Text(content)]
+    return Msg(role=role, content=parts)
+
+# %% ../nbs/00_msg_parts.ipynb #0ab86ef0
+def mk_msgs(
+    msgs    # List of messages (each: str, bytes, list, Msg, or Completion)
+):
+    "Create a list of fastllm canonical Msgs."
+    if not msgs: return []
+    if not isinstance(msgs, list): msgs = [msgs]
+    msgs = L(msgs).map(lambda m: fmt2hist(m) if isinstance(m,str) and (tool_info in m or usage_info in m) else [m]).concat()
+    res, role = [], 'user'
+    for m in msgs:
+        res.append(msg := mk_msg(m, role=role))
+        role = 'assistant' if msg.role in ('user','tool') else 'user'
+    return res

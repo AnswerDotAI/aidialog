@@ -15,10 +15,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ['fastcore>=2.1.20']
+dependencies = ['fastcore>=2.2.0']
 
 [project.optional-dependencies]
-dev = ['exhash', 'nbformat']
+dev = ['exhash', 'nbformat', 'remold']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/aidialog"
