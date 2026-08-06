@@ -129,9 +129,9 @@ class Msg(BasicRepr):
 class _ToolPart(Part):
     "Shared shape of a tool call and its result."
     def __init__(self, id=None, name=None, arguments=None, server=False, text=None, **kw):
+        if arguments is None: arguments = {}
         super().__init__(**kw)
         store_attr('id,name,arguments,server,text')
-        self.arguments = ifnone(arguments, {})
 
 class ToolUse  (_ToolPart, tag=PartType.tool_use   ): "A tool invocation; `server` marks one the provider ran itself."
 class ToolResult(_ToolPart, tag=PartType.tool_result): "A tool call's result, `text` holding the output."
@@ -162,8 +162,8 @@ def display_list(l):
 class Completion(BasicRepr):
     "Normalized completion response."
     def __init__(self, model, message, finish_reason=None, usage=None, api_name=None, vendor_name=None, raw=None):
+        if raw is None: raw = {}
         store_attr()
-        self.raw = ifnone(raw, {})
     def __eq__(self, o): return type(o) is type(self) and self.__dict__ == o.__dict__
     def __hash__(self): return hash((self.model, self.finish_reason, self.api_name, self.vendor_name))
 
