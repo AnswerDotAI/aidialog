@@ -98,7 +98,7 @@ def msg(self:Dialog,
 
 # %% ../nbs/04_dlgskill.ipynb #def6dd98
 def summary_dlg(
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     maxlen:int=120, # Maximum characters per line
 ):
     "One `preview` per message of the dialog file"
@@ -135,7 +135,7 @@ def view(self:Dialog,
     return PrettyString(f'<dialog name="{self.name}">{body}</dialog>')
 
 def view_dlg(
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     incl_out:bool=False, # Include code outputs?
     only_errors:bool=False, # Show only code messages with error outputs (implies `incl_out`)?
     trunc_out:bool=True, # Truncate each output to ~512 chars?
@@ -164,7 +164,7 @@ def view(self:Message,
 
 def view_msg(
     id, # Message id, looked up in `dlg` (unique prefixes allowed)
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     nums:bool=True, # Show line numbers?
     start_line:int=1, # Starting line to view
     end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
@@ -177,7 +177,7 @@ def view_msg(
 
 def view_msgs(
     *ids, # Message ids
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     nums:bool=True, # Show line numbers?
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     incl_out:bool=False, # Append each output (a prompt's reply, or code outputs) in an `<out>` block?
@@ -253,7 +253,7 @@ def find_msgs(self:Dialog,
 @delegates(Dialog.find_msgs)
 def find_msgs(
     re_pattern:str='', # Regex over content (a prompt's reply included), DOTALL+MULTILINE; an invalid regex matches literally
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     **kwargs,
 )->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), indexed by id and shown as previews with context rows marked
     "Find messages in the dialog file matching all the given criteria; for live results, call `Dialog.find_msgs`"
@@ -279,7 +279,7 @@ def move_msgs(
     ids, # Message id(s) to move
     before=None, # Move before this message or id
     after=None, # Move after this message or id
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Move messages in the dialog file, keeping their relative order; returns them"
     d = _to_dlg(dlg)
@@ -322,7 +322,7 @@ def split(self:Message,
 def split_msg(
     id, # Message id to split
     *linenos:int, # Split before each of these 1-based lines
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Split a message in the dialog file (see `Message.split`)"
     d = _to_dlg(dlg)
@@ -344,7 +344,7 @@ def merge_msgs(self:Dialog,
 
 def merge_msgs(
     *ids, # Adjacent message ids to merge
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Merge messages in the dialog file (see `Dialog.merge_msgs`)"
     d = _to_dlg(dlg)
@@ -385,14 +385,14 @@ def paste_msgs(self:Dialog,
 
 def copy_msgs(
     *ids, # Message ids to copy
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Copy messages into the paste buffer (replacing its contents), for later `paste_msgs`"
     return _to_dlg(dlg).copy_msgs(*ids)
 
 def cut_msgs(
     *ids, # Message ids to cut
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Copy messages into the paste buffer, then remove them from the dialog file"
     d = _to_dlg(dlg)
@@ -403,7 +403,7 @@ def cut_msgs(
 def paste_msgs(
     before=None, # Insert before this message or id
     after=None, # Insert after this message or id
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Insert copies of the buffered messages (fresh ids) before/after a message or id in the dialog file; returns the new messages"
     d = _to_dlg(dlg)
@@ -516,7 +516,7 @@ def exhash(self:Message,
 
 def lnhashview_msg(
     id, # Message id, looked up in `dlg` (unique prefixes allowed)
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Hash-addressed view of a message's content, for `msg_exhash`"
     return _to_dlg(dlg).msg(id).lnhashview()
@@ -525,7 +525,7 @@ def msg_exhash(
     id, # Message id, looked up in `dlg` (unique prefixes allowed)
     *cmds:tuple, # exhash command tuples, addresses from `lnhashview_msg`
     sw:int=4, # Shift width for indent commands
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Apply exhash commands to a message in the dialog file, returning the diff"
     d = _to_dlg(dlg)
@@ -541,7 +541,7 @@ def add_msg(
     after:str=None, # message or id to insert after
     meta=None, # Cell metadata, carried verbatim through save/load
     export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Add a new message before/after an existing one (pass exactly one), returning it"
     d, sv = _load_dlg(dlg)
@@ -552,7 +552,7 @@ def add_msg(
 
 def del_msgs(
     *ids, # Messages or ids to delete
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
     "Delete messages by id, returning the removed messages"
     d, sv = _load_dlg(dlg)
@@ -578,7 +578,7 @@ def create_dlg(
 @delegates(Message.update)
 def update_msg(
     id, # A `Message`, or an id: exact, or unique prefix
-    dlg=None, # An ipynb path; the current dialog file if None
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     **kwargs,
 ):
     "Update a message's type, meta, or export directive in the dialog file (see `Message.update`)"
