@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.11
+
+### New Features
+
+- Add reply2chat to convert a stored reply to chat messages, and a plain flag on dlg2hist/dlg2chat to skip the serving envelope ([#26](https://github.com/AnswerDotAI/aidialog/issues/26))
+
+
 ## 0.0.10
 
 ### New Features
