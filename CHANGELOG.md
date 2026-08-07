@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.12
+
+### New Features
+
+- Add Message.`cell_type`/source and Dialog.cells properties so dialogs duck-type as notebooks; `to_cell` now uses them ([#27](https://github.com/AnswerDotAI/aidialog/issues/27))
+
+
 ## 0.0.11
 
 ### New Features
