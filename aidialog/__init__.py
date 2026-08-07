@@ -4,4 +4,4 @@ Modules:
 
 - `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model"""
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
