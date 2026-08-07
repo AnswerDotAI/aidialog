@@ -44,16 +44,30 @@ def cell_meta(self:Message):
         else: meta.pop(k, None)
     return meta
 
+# %% ../nbs/02_ipynb.ipynb #929b8dbf
+@patch(as_prop=True)
+def cell_type(self:Message):
+    "This message's notebook cell type"
+    return 'markdown' if self.msg_type in (snote,sprompt) else self.msg_type
+
+@patch(as_prop=True)
+def source(self:Message):
+    "This message's cell source: `content`, with a prompt's reply appended as it serializes"
+    cts = self.content or ''
+    if self.msg_type==sprompt and (o := self.ai_res): cts = cts + reply_sep + o
+    return cts
+
+@patch(as_prop=True)
+def cells(self:Dialog):
+    "Messages as cells: dialogs duck-type as notebooks for read-only notebook consumers"
+    return self.messages
+
 # %% ../nbs/02_ipynb.ipynb #0dde746d
 @patch
 def to_cell(self:Message, version=2):
     "Convert message to a notebook cell"
     meta = self.cell_meta()
-    cts = self.content or ''
-    cell_type = 'markdown' if self.msg_type in (snote,sprompt) else self.msg_type
-    if self.msg_type==sprompt:
-        meta['solveit_ai'] = True
-        if o := self.ai_res: cts = cts + reply_sep + o
+    if self.msg_type==sprompt: meta['solveit_ai'] = True
     outkw = {}
     if self.msg_type==scode and self.output:
         outputs = self.output
@@ -61,7 +75,7 @@ def to_cell(self:Message, version=2):
         outkw['outputs'] = [_clean_out_meta(o) for o in outputs]
     atts = {att.id: att2dict(att) for att in (self.attachments or [])}
     if atts and self.msg_type in (sprompt,snote): outkw['attachments'] = atts
-    cell = mk_cell(cts, cell_type, id=self.id, metadata=meta, **outkw)
+    cell = mk_cell(self.source, self.cell_type, id=self.id, metadata=meta, **outkw)
     if repairs := repair_cell(cell): print('NB repair:', '; '.join(repairs))
     return cell
 
