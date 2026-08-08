@@ -531,6 +531,17 @@ def dlg2py(dlg):
     "The exported code of `dlg`, as a python source string"
     return '\n\n'.join(m.content for m in dlg.messages if m.msg_type==scode and m.exported)
 
+# %% ../nbs/01_dialog.ipynb #d905dc3f
+@patch
+def directive(self:Message, name, default=None):
+    "Value of directive `name` (`''` if bare), or `default` if absent"
+    return self.directives.get(name, default)
+
+@patch
+def has_directive(self:Message, name):
+    "Does this message carry directive `name`, in content or meta?"
+    return name in self.directives
+
 # %% ../nbs/01_dialog.ipynb #e4fb159d
 @patch
 def update(self:Message,
