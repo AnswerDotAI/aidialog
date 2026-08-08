@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.13
+
+### New Features
+
+- nbrun: run cells via fastcore.nbio.`run_cell`, capture stderr, stop without re-raising on error ([#28](https://github.com/AnswerDotAI/aidialog/issues/28))
+
+
 ## 0.0.12
 
 ### New Features
