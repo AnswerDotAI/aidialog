@@ -10,7 +10,8 @@ __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'I
            'Message', 'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds',
            'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval',
            'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'dlg2py', 'copy_export', 'merge_metas',
-           'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2md', 'dlg2md']
+           'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2md', 'dlg2md',
+           'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
 import base64, copy, random, re, weakref
@@ -18,7 +19,7 @@ from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES,deep_merge,find_id,Found
+from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES,deep_merge,find_id,Found,render_text
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -711,7 +712,9 @@ def fmt_tools(s):
     return ''.join(out)
 
 # %% ../nbs/01_dialog.ipynb #103d7fb7
-def msg2md(m):
+def msg2md(m,
+    weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
+):
     "One message as Markdown: notes verbatim, code in a ```python fence with outputs in a `::: output` div, prompts and replies in `::: prompt`/`::: reply` divs; None for empty code"
     if m.msg_type == snote: return m.content
     if m.msg_type == sraw: return fenced(m.content)
@@ -719,11 +722,22 @@ def msg2md(m):
         parts = [fenced(m.content, ' prompt', ch=':')]
         if (ai := (m.ai_res or '')).strip(): parts.append(fenced(fmt_tools(ai), ' reply', ch=':'))
         return '\n\n'.join(parts)
+    if weave: return render_text(m.output or []) or None
     if not m.content.strip(): return None
     parts = [fenced(m.content, 'python')]
     if (outs := render_md(m.output or [])): parts.append(fenced(outs, ' output', ch=':'))
     return '\n\n'.join(parts)
 
-def dlg2md(d):
+def dlg2md(d,
+    exportfilter:bool=False, # Keep only the messages `export_filter` selects?
+    weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
+):
     "The dialog as one Markdown document"
-    return '\n\n'.join(filter(None, map(msg2md, d))) + '\n'
+    ms = export_filter(d) if exportfilter else d
+    return '\n\n'.join(filter(None, (msg2md(m, weave=weave) for m in ms))) + '\n'
+
+# %% ../nbs/01_dialog.ipynb #0a922a21
+def export_filter(ms):
+    "The messages participating in an export: every exported one if any exist, else every non-pinned one"
+    exp = [m for m in ms if m.exported]
+    return exp if exp else [m for m in ms if not m.pinned]

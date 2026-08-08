@@ -637,7 +637,7 @@ def nbrun_magic(line):
     if not fname: raise ValueError('No `fname` given and no current dialog file (`set_dlg`)')
     stop = not kw.pop('continue_on_error', False)
     show = bool(kw.pop('show', False))
-    if not ids and not kw: kw['all'] = True
+    if not ids and not (kw.keys() & {'above','below','all'}): kw['all'] = True
     return _run_nb_cells(get_ipython(), ids, fname, stop, show, **kw)
 
 # %% ../nbs/04_dlgskill.ipynb #56388a3a
@@ -686,7 +686,7 @@ class RunResult(FoundMsgs):
 @patch
 @delegates(select_cells)
 async def run(self:Dialog,
-    *ids, # Message ids, or unique prefixes, to run; with `above`/`below`, the anchor; none, with no flags: run all
+    *ids, # Message ids, or unique prefixes, to run; with `above`/`below`, the anchor; none, with no selection flags: run all
     shell=None, # `CaptureShell` to run in, kept for the caller; default is a fresh one, dropped at the end
     continue_on_error:bool=False, # Keep running after a failure?
     timeout:int=None, # Seconds before each message's run times out
@@ -694,7 +694,7 @@ async def run(self:Dialog,
 ):
     "Run code messages on an execnb `CaptureShell`, capturing outputs into each message; `save` persists them"
     from execnb.shell import CaptureShell
-    if not ids and not any(kwargs.values()): kwargs['all'] = True
+    if not ids and not any(map(kwargs.get, ('above','below','all'))): kwargs['all'] = True
     sh = ifnone(shell, CaptureShell())
     res = []
     for m in select_cells(self, *ids, **kwargs):
