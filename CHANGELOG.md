@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.14
+
+### New Features
+
+- Add `export_filter` and weave options to dlg2md for document exports; fix run/nbrun to only treat selection flags as selectors ([#30](https://github.com/AnswerDotAI/aidialog/issues/30))
+- Add Dialog.run/Message.run to execute code messages on a CaptureShell with RunResult status report; bare %nbrun now runs all cells ([#29](https://github.com/AnswerDotAI/aidialog/issues/29))
+
+
 ## 0.0.13
 
 ### New Features
