@@ -18,7 +18,7 @@ classifiers = [
 dependencies = ['fastcore>=2.2.5']
 
 [project.optional-dependencies]
-dev = ['exhash', 'nbformat', 'remold']
+dev = ['exhash', 'execnb>=0.2.11', 'nbformat', 'remold']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/aidialog"

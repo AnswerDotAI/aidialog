@@ -22,6 +22,7 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 - Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - `update_msg(id, ..., dlg=)` / `m.update(...)`: one transaction for a message's attributes. Plain keywords assign (`content=`, `msg_type=`, `output=`, `meta=` replacing wholesale); `mergemeta` deep-merges into `meta` (a `None` value deletes its key); `export` sets the nbdev directive -- `True` adds, `False` removes (there is no negative form), and either migrates a content-form `#| export` line to meta. The function returns a diff of the message's XML plus a `meta:` line, so every change it can make is visible.
 - The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `skip_noeval`, `continue_on_error`, `show`) or id prefixes, and `fname=` overrides the notebook for one call. Only cells named by id display their output: bulk-selected cells run silently (`show` overrides), errors always surface naming the failed cell, and the run ends with a `nbrun: N cells ok` line. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel.
+- `await d.run(*ids, ...)` / `await m.run()`: the captured twin, on a held `Dialog`. Runs code messages on an execnb `CaptureShell` (fresh and dropped, unless you pass `shell=`), assigns each result to `m.output` in memory (`d.save()` persists), and returns the messages run as a `RunResult` whose repr is a status report: ok lines collapse into a counted marker, failures always show with the exception. `above`/`below` anchor at the ids you pass, and bare `d.run()` runs all code messages.
 - Text edits: `msg_str_replace`, `msg_strs_replace`, `msg_insert_line`, `msg_replace_lines`, `msg_del_lines`, `msg_ast_replace` (all with `re_filter`/line-range powers; `out=True` edits a prompt's reply or a code message's outputs literal), with the same names as `Message` methods for in-memory editing; `lnhashview_msg`/`msg_exhash` (and `m.lnhashview()`/`m.exhash()`) for hash-verified line edits (`lnhashview_msg` is `view_msg(..., lnhashs=True)`; only the exhash pair needs the `exhash` package).
 
 ## Idiomatic usage
@@ -43,7 +44,7 @@ __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replac
            'set_dlg', 'cur_dlg', 'summary_dlg', 'msg2xml', 'view_dlg', 'view_msg', 'view_msgs', 'FoundMsgs',
            'find_msgs', 'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
            'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
+           'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension', 'RunResult']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -115,7 +116,7 @@ def msg2xml(m, incl_out=False, trunc_out=True, ids=True):
         if trunc_out: o = truncstr(o, 512)
     else: o = ''
     it = item2xml(_t2tag.get(m.msg_type, m.msg_type), m.content, o, id=m.id if ids else None,
-                  kind=m.meta.get('rec_kind'), meta=m.meta)
+        kind=m.meta.get('rec_kind'), meta=m.meta)
     return to_xml(it, do_escape=False)
 
 @patch
@@ -626,7 +627,7 @@ async def _run_nb_cells(shell, ids, fname, stop=True, show=False, **kw):
     print(f'nbrun: {n} cell{"s"*(n!=1)} ok'+(f', {fails} failed' if fails else ''))
 
 def nbrun_magic(line):
-    "Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides"
+    "Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides, a bare line runs all"
     kw,ids = {},[]
     for t in shlex.split(line):
         if '=' in t: kw.update([t.split('=', 1)])
@@ -636,6 +637,7 @@ def nbrun_magic(line):
     if not fname: raise ValueError('No `fname` given and no current dialog file (`set_dlg`)')
     stop = not kw.pop('continue_on_error', False)
     show = bool(kw.pop('show', False))
+    if not ids and not kw: kw['all'] = True
     return _run_nb_cells(get_ipython(), ids, fname, stop, show, **kw)
 
 # %% ../nbs/04_dlgskill.ipynb #56388a3a
@@ -647,3 +649,65 @@ try:
     from IPython import get_ipython
     if (_ip := get_ipython()): load_ipython_extension(_ip)
 except ImportError: pass
+
+# %% ../nbs/04_dlgskill.ipynb #15d95193
+class RunResult(FoundMsgs):
+    "Messages run by `Dialog.run`, shown as a status report"
+    def __init__(self, items=None, head=False):
+        super().__init__(items)
+        self.head = head
+    def _line(self, m, maxlen):
+        if m.has_error:
+            e = first(o for o in m.output if o.get('output_type')=='error')
+            ln = f'{m.id}: {e["ename"]}: {e["evalue"]}'.replace('\n', '\\n')
+        else: ln = f'{m.id}: ok'
+        return ln if len(ln)<=maxlen else ln[:maxlen-1]+'…'
+    def show(self,
+        maxlen:int=120, # Maximum characters per status line
+        rows:int=20, # Max ok lines shown in full (None: all); the rest collapse into a counted marker
+    ):
+        "One status line per message run, a collapsed marker for long ok stretches, and a final count line"
+        idxs = list(range(len(self)))
+        win = set(idxs if rows is None else idxs[:rows] if self.head else idxs[-rows:])
+        out,elided = [],0
+        for i,m in enumerate(self):
+            if i in win or m.has_error:
+                if elided: out.append(f'[...{elided} messages ok]')
+                out.append(self._line(m, maxlen))
+                elided = 0
+            else: elided += 1
+        if elided: out.append(f'[...{elided} messages ok]')
+        fails = sum(m.has_error for m in self)
+        n = len(self)-fails
+        out.append(f'run: {n} msg{"s"*(n!=1)} ok'+(f', {fails} failed' if fails else ''))
+        return PrettyString('\n'.join(out))
+
+# %% ../nbs/04_dlgskill.ipynb #6b5df69a
+@patch
+@delegates(select_cells)
+async def run(self:Dialog,
+    *ids, # Message ids, or unique prefixes, to run; with `above`/`below`, the anchor; none, with no flags: run all
+    shell=None, # `CaptureShell` to run in, kept for the caller; default is a fresh one, dropped at the end
+    continue_on_error:bool=False, # Keep running after a failure?
+    timeout:int=None, # Seconds before each message's run times out
+    **kwargs
+):
+    "Run code messages on an execnb `CaptureShell`, capturing outputs into each message; `save` persists them"
+    from execnb.shell import CaptureShell
+    if not ids and not any(kwargs.values()): kwargs['all'] = True
+    sh = ifnone(shell, CaptureShell())
+    res = []
+    for m in select_cells(self, *ids, **kwargs):
+        m.output = await sh.run(m.source, timeout=timeout)
+        res.append(m)
+        if m.has_error and not continue_on_error: break
+    return RunResult(res, head=kwargs.get('below', False))
+
+# %% ../nbs/04_dlgskill.ipynb #c9dd414d
+@patch
+async def run(self:Message,
+    shell=None, # `CaptureShell` to run in, kept for the caller; default is a fresh one, dropped at the end
+    timeout:int=None, # Seconds before the run times out
+):
+    "Run this code message on an execnb `CaptureShell`, capturing outputs into it"
+    return await (self.dlg or Dialog([self])).run(self.id, shell=shell, timeout=timeout)
