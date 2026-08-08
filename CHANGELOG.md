@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.16
+
+### New Features
+
+- Move XML views, cell props, and dialog running into dialog.py; rename Dialog.run/Message.run to execute ([#32](https://github.com/AnswerDotAI/aidialog/issues/32))
+
+
 ## 0.0.15
 
 ### New Features
