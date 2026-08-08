@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ['fastcore>=2.2.0']
+dependencies = ['fastcore>=2.2.5']
 
 [project.optional-dependencies]
 dev = ['exhash', 'nbformat', 'remold']

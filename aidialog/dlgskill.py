@@ -46,13 +46,13 @@ __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replac
            'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
-import shlex, re, copy, traceback
-from contextlib import redirect_stdout
+import shlex, re, copy
+from contextlib import redirect_stdout, redirect_stderr
 from fastcore.utils import *
 from fastcore.meta import splice_sig, delegates
 from fastcore.xtras import str_diff
 from fastcore.xml import to_xml
-from fastcore.nbio import item2xml, read_nb, select_cells, show_cell, exec_cell, Found
+from fastcore.nbio import item2xml, read_nb, select_cells, run_cell, Found
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace, lnhash
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
@@ -608,22 +608,21 @@ _nbrun_flags = ('above','below','all','exported','skip_noeval','continue_on_erro
 
 async def _run_nb_cells(shell, ids, fname, stop=True, show=False, **kw):
     "Run code cells of `fname` selected by `select_cells` in `shell`'s namespace; only cells named in `ids` display, unless `show`"
-    __tracebackhide__ = True
     n,fails = 0,0
     for c in select_cells(read_nb(fname), *ids, **kw):
         loud = show or any(str(c.id).startswith(p) for p in ids)
-        cap = None if loud else io.StringIO()
-        try:
-            if loud: await show_cell(shell, c.source)
-            else:
-                with redirect_stdout(cap): await exec_cell(shell, c.source)
-            n += 1
-        except Exception:
-            if cap: print(cap.getvalue(), end='')
+        if loud: res = await run_cell(shell, c.source, store_history=True)
+        else:
+            cap,cerr = io.StringIO(),io.StringIO()
+            with redirect_stdout(cap), redirect_stderr(cerr): res = await run_cell(shell, c.source, silent=True)
+        if res.error_in_exec or res.error_before_exec:
+            if not loud:
+                print(cap.getvalue(), end='')
+                print(cerr.getvalue(), end='', file=sys.stderr)
             print(f'nbrun: error in cell {c.id}')
-            if stop: raise
-            traceback.print_exc()
             fails += 1
+            if stop: break
+        else: n += 1
     print(f'nbrun: {n} cell{"s"*(n!=1)} ok'+(f', {fails} failed' if fails else ''))
 
 def nbrun_magic(line):
