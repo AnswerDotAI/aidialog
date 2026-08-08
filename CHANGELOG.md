@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.15
+
+### New Features
+
+- Add Message.directive and Message.`has_directive` accessors for querying directives ([#31](https://github.com/AnswerDotAI/aidialog/issues/31))
+
+
 ## 0.0.14
 
 ### New Features
