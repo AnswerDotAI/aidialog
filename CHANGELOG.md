@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.17
+
+### New Features
+
+- Simplify Message rich repr: use preview line instead of summary with details block ([#33](https://github.com/AnswerDotAI/aidialog/issues/33))
+
+
 ## 0.0.16
 
 ### New Features
