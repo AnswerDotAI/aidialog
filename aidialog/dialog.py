@@ -199,18 +199,6 @@ class Message:
 add_id_hash(Message, 'id')
 Dialog.msg_cls = Message
 
-# %% ../nbs/01_dialog.ipynb #e3e3ab18
-@patch
-def _repr_markdown_(self:Message):
-    detls = '\n'.join(f'- {k}: {getattr(self, k)}' for k in self.flds)
-    return f"""{self.summ}
-
-<details>
-
-{detls}
-
-</details>"""
-
 # %% ../nbs/01_dialog.ipynb #145c8a42
 def _prev_line(txt, maxlen, pre=''):
     "One escaped preview line, `pre`+`txt` capped at `maxlen`, ending in a humanized `[size]` when `txt` was cut"
@@ -227,6 +215,8 @@ def preview(self:Message,
     if self.msg_type==sprompt and self.ai_res: return res + '\n' + _prev_line(self.ai_res, maxlen, '> ')
     if self.output: res += f" ⇒ out({humanize(len(str(self.output)))})"
     return res
+
+Message._repr_markdown_ = Message.preview
 
 # %% ../nbs/01_dialog.ipynb #a72644ce
 class MsgRow:
