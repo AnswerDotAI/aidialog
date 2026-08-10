@@ -6,6 +6,7 @@
 
 ### New Features
 
+- Replace nbrun `skip_noeval` with `ignore_eval`: eval cascade filtering now always on for bulk runs ([#34](https://github.com/AnswerDotAI/aidialog/issues/34))
 - Simplify Message rich repr: use preview line instead of summary with details block ([#33](https://github.com/AnswerDotAI/aidialog/issues/33))
 
 
