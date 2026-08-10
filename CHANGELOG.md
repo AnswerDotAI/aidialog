@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.18
+
+### New Features
+
+- Make Dialog/Message.execute sync, track file mtime via new `safe_mtime` in read/`write_ipynb` ([#35](https://github.com/AnswerDotAI/aidialog/issues/35))
+
+
 ## 0.0.17
 
 ### New Features
