@@ -14,7 +14,7 @@ __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'I
            'dlg2md', 'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
-import base64, copy, random, re, weakref
+import asyncio, base64, copy, random, re, weakref
 from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
@@ -820,7 +820,7 @@ class RunResult(Msgs):
 # %% ../nbs/01_dialog.ipynb #780d5344
 @patch
 @delegates(select_cells)
-async def execute(self:Dialog,
+def execute(self:Dialog,
     *ids, # Message ids, or unique prefixes, to run; with `above`/`below`, the anchor; none, with no selection flags: run all
     shell=None, # `CaptureShell` to run in, kept for the caller; default is a fresh one, dropped at the end
     continue_on_error:bool=False, # Keep running after a failure?
@@ -833,19 +833,19 @@ async def execute(self:Dialog,
     sh = ifnone(shell, CaptureShell())
     res = []
     for m in select_cells(self, *ids, **kwargs):
-        m.output = await sh.run(m.source, timeout=timeout)
+        m.output = sh.run(m.source, timeout=timeout)
         res.append(m)
         if m.has_error and not continue_on_error: break
     return RunResult(res, head=kwargs.get('below', False))
 
 # %% ../nbs/01_dialog.ipynb #4173c0fa
 @patch
-async def execute(self:Message,
+def execute(self:Message,
     shell=None, # `CaptureShell` to run in, kept for the caller; default is a fresh one, dropped at the end
     timeout:int=None, # Seconds before the run times out
 ):
     "Run this code message on an execnb `CaptureShell`, capturing outputs into it"
-    return await (self.dlg or Dialog([self])).execute(self.id, shell=shell, timeout=timeout)
+    return (self.dlg or Dialog([self])).execute(self.id, shell=shell, timeout=timeout)
 
 # %% ../nbs/01_dialog.ipynb #103d7fb7
 def msg2md(m,
