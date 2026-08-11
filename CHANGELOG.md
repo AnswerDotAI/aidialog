@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.19
+
+### New Features
+
+- Add current-message anchor for `add_msg`, dlg class in `set_dlg`, MAXLEN 180, strict update field checks, no-mutate output serialization ([#36](https://github.com/AnswerDotAI/aidialog/issues/36))
+
+
 ## 0.0.18
 
 ### New Features
