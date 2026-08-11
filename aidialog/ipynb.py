@@ -30,6 +30,8 @@ def split_cell_src(cell):
 _out_meta_skip = {'__type'}
 
 def _clean_out_meta(o):
+    "A copy of output `o` without transient metadata; never mutates the live output"
+    o = dict(o)
     if m := o.get('metadata'): o['metadata'] = {k:v for k,v in m.items() if k not in _out_meta_skip}
     return o
 
@@ -154,6 +156,6 @@ def read_ipynb(fname, cls=Dialog, name=None):
 @patch
 def save(self:Dialog, fname=None):
     "Write back to `fname`, or to the `path_` stamped by `read_ipynb`"
-    fname = fname or getattr(self, 'path_', None)
+    fname = fname or self.path_
     if not fname: raise ValueError('no fname passed, and no `path_` stamped by read_ipynb')
     write_ipynb(self, fname)

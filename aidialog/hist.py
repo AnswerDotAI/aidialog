@@ -161,7 +161,7 @@ def merge_media(text, parts):
 def media_path(self:Dialog, ref):
     "Resolve a non-URL `#ai` media ref to a local path; hosts patch this to add their own roots and safety rules"
     p = Path(ref)
-    if not p.is_absolute() and (pth := getattr(self, 'path_', None)): p = Path(pth).parent/p
+    if not p.is_absolute() and self.path_: p = Path(self.path_).parent/p
     return p.resolve()
 
 def _mk_media_tag(ref, msg, aim_info, max_im_sz=None):

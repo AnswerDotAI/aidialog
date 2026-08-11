@@ -19,7 +19,7 @@ The function/method two-shapes contract is `fastcore.editskill`'s, learned once:
 - `summary_dlg(dlg)` / `d.summary()`: one `preview` per message, `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket, as in nbio's `CellRow`, shows meta-form nbdev directives such as `[export]`), with a prompt's reply on a following `> ` line; a line cut short ends in a humanized `[size]`.
 - `find_msgs(pattern, dlg, ...)`: search by regex, type, error state, heading, ids, or a `pred` (`symdef_finder`/`symref_finder`/`ast_finder` build structural ones); `context` defaults to 1 even with `ids=`, because the neighbouring message usually explains the match -- retrieve and read it. Returns `MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`) in a `MsgRows`; `d.find_msgs(...)` returns live `Message`s in a `FoundMsgs`. Both index by message id (exact or unique prefix) and refuse integer positions: a find result includes context rows, so `[0]` may be a neighbour of the match, and the raised error teaches the id idiom. Previews mark context rows with `-` in place of the first `:`. Every live message carries a `dlg` backref to its owning `Dialog`, so dialog-level operations are always in reach from a message in hand (e.g. `m.dlg.save()` after mutating `m.output` directly).
 - `view_dlg(dlg)` / `d.view()` / `view_msg(id)` / `m.view()` / `view_msgs(*ids)` / `msg2xml(m)` / `m.to_xml()`: full views in the shared `item2xml` grammar (a prompt's reply is its `<out>` section; meta `nbdev` directives render as attrs, so a meta-exported message carries a bare `export`); `incl_out=True` on the line views appends the message's output the same way.
-- Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
+- Structure: `add_msg`, `del_msgs`, `move_msgs`, `split_msg`, `merge_msgs`, `copy_msgs`/`cut_msgs`/`paste_msgs`, `create_dlg`, with session twins `d.move_msgs`, `m.split`, `d.merge_msgs`, `d.copy_msgs`/`d.cut_msgs`/`d.paste_msgs` (session adds go through `d.mk_message`, deletes through `d.remove_msgs`). `add_msg` with neither `before=` nor `after=` places after the current message (`set_cur_msg`, which a host sets and no write ever moves), or at the end when that is unset or gone. `add_msg` and `d.mk_message` take `meta=` and an `export=` shortcut for the meta `nbdev` export flag, readable and assignable as `m.meta_exported` (`m.exported` reads content and meta together, and is what `find_msgs(only_exp=True)` filters on). The `%%add_msg` magic takes its body verbatim: its line is `%%add_msg [dlg] [msg_type] [export] [before=|after=<id>]`, where a bare path token is the dlg and a bare type name the msg_type, and keyword spellings win over bare tokens.
 - `update_msg(id, ..., dlg=)` / `m.update(...)`: one transaction for a message's attributes. Plain keywords assign (`content=`, `msg_type=`, `output=`, `meta=` replacing wholesale); `mergemeta` deep-merges into `meta` (a `None` value deletes its key); `export` sets the nbdev directive -- `True` adds, `False` removes (there is no negative form), and either migrates a content-form `#| export` line to meta. The function returns a diff of the message's XML plus a `meta:` line, so every change it can make is visible.
 - The `%nbrun` line magic runs code cells from the current notebook in the running kernel, by cell id prefix, same grammar: bare tokens are flags (`above`, `below`, `all`, `exported`, `ignore_eval`, `continue_on_error`, `show`) or id prefixes, and `fname=` overrides the notebook for one call. Only cells named by id display their output: bulk-selected cells run silently (`show` overrides), errors always surface naming the failed cell, and the run ends with a `nbrun: N cells ok` line. It returns a coroutine (awaited by async-magic machinery) and runs each cell in the kernel's namespace through user-level channels only (exec, `display()`, raising), so it behaves identically in every kernel.
 - `d.execute(*ids, ...)` / `m.execute()`: the captured twin, on a held `Dialog`. Runs code messages on an execnb `CaptureShell` (fresh and dropped, unless you pass `shell=`), assigns each result to `m.output` in memory (`d.save()` persists), and returns the messages run as a `RunResult` whose repr is a status report: ok lines collapse into a counted marker, failures always show with the exception. It blocks until done, so an async host should wrap it in `asyncio.to_thread`. `above`/`below` anchor at the ids you pass, and bare `d.execute()` runs all participating code messages (the `eval` cascade).
@@ -41,10 +41,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
 # %% auto #0
 __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_ast_replace',
-           'set_dlg', 'cur_dlg', 'summary_dlg', 'view_dlg', 'view_msg', 'view_msgs', 'FoundMsgs', 'find_msgs',
-           'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs', 'symdef_finder',
-           'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs', 'create_dlg',
-           'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
+           'set_dlg', 'cur_dlg', 'set_cur_msg', 'cur_msg', 'summary_dlg', 'view_dlg', 'view_msg', 'view_msgs',
+           'FoundMsgs', 'find_msgs', 'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs',
+           'symdef_finder', 'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs',
+           'create_dlg', 'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -61,25 +61,42 @@ from .ipynb import read_ipynb, write_ipynb
 
 # %% ../nbs/04_dlgskill.ipynb #278fa834
 _cur_dlg = None
+_cur_msgid = None
+_cur_cls = Dialog
 
 def set_dlg(
     fname, # ipynb path that later calls will default to
+    cls=None, # `Dialog` subclass to read with from now on (None: keep current; initially `Dialog`)
 ):
     "Set the current dialog file, used by these functions when `dlg` is None"
-    global _cur_dlg
-    _cur_dlg = Path(fname)
+    global _cur_dlg, _cur_msgid, _cur_cls
+    _cur_dlg,_cur_msgid = Path(fname),None
+    if cls: _cur_cls = cls
     return _cur_dlg
 
 def cur_dlg():
     "A fresh `Dialog` read from the current dialog file (None if unset): the session-side entry to the ambient default"
-    return read_ipynb(_cur_dlg) if _cur_dlg else None
+    return read_ipynb(_cur_dlg, cls=_cur_cls) if _cur_dlg else None
+
+def set_cur_msg(
+    id, # A `Message` or its id; None clears it
+):
+    "Set the current message, used by `add_msg` when no placement is given"
+    global _cur_msgid
+    _cur_msgid = id.id if isinstance(id, Message) else id
+    return _cur_msgid
+
+def cur_msg():
+    "The current message, read fresh from the current dialog file (None if unset, or no longer there)"
+    if (d := cur_dlg()) is None: return None
+    return first(m for m in d.messages if m.id==_cur_msgid)
 
 def _to_dlg(x):
     "The dialog file `x` (None: the current dialog file), read fresh from disk"
     if isinstance(x, Dialog): raise TypeError('dlg= takes an ipynb path; on a live Dialog, call the method instead')
     if x is None: x = _cur_dlg
     if x is None: raise ValueError('No dialog: pass a path, or call set_dlg() first')
-    return read_ipynb(x)
+    return read_ipynb(x, cls=_cur_cls)
 
 def _load_dlg(x):
     "`(dialog, True)`: read `x` from disk; the second element marks it ours to save"
@@ -100,7 +117,7 @@ def msg(self:Dialog,
 # %% ../nbs/04_dlgskill.ipynb #def6dd98
 def summary_dlg(
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
-    maxlen:int=120, # Maximum characters per line
+    maxlen:int=MAXLEN, # Maximum characters per line
 ):
     "One `preview` per message of the dialog file"
     return _to_dlg(dlg).summary(maxlen)
@@ -492,13 +509,14 @@ def add_msg(
     source:str, # source for the new message
     msg_type:str='code', # 'code', 'note', 'prompt', or 'raw'
     before:str=None, # message or id to insert before
-    after:str=None, # message or id to insert after
+    after:str=None, # message or id to insert after; defaults to the current message (`set_cur_msg`)
     meta=None, # Cell metadata, carried verbatim through save/load
     export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
 ):
-    "Add a new message before/after an existing one (pass exactly one), returning it"
+    "Add a new message before or after an existing one (default: after the current message, else at the end), returning it"
     d, sv = _load_dlg(dlg)
+    if dlg is None and before is None and after is None: after = first(m for m in d.messages if m.id==_cur_msgid)
     m = d.mk_message(source, msg_type=msg_type, meta=meta, export=export,
         before=None if before is None else d.msg(before), after=None if after is None else d.msg(after))
     _save(d, sv)
