@@ -207,8 +207,8 @@ Dialog.msg_cls = Message
 
 # %% ../nbs/01_dialog.ipynb #145c8a42
 def _prev_line(txt, maxlen, pre=''):
-    "One escaped preview line, `pre`+`txt` capped at `maxlen`, ending in a humanized `[size]` when `txt` was cut"
-    return truncstr((pre+txt).replace('\n', '\\n'), maxlen, suf=f'…[{humanize(len(txt))}]')
+    "One ¶-joined preview line, `pre`+`txt` capped at `maxlen`, ending in a humanized `[size]` when `txt` was cut"
+    return truncstr(re.sub(r'\n(?:\s*\n)*', '¶', pre+txt), maxlen, suf=f'…[{humanize(len(txt))}]')
 
 @patch
 def preview(self:Message,
@@ -677,7 +677,7 @@ from .msg_parts import tool_info as _tool_info, usage_info as _usage_info
 def _fmt_param(v, mx=40):
     "Compact display form of one tool arg or result value"
     s = v if isinstance(v, str) else dumps(v, ensure_ascii=False)
-    s = s.replace('\n', '\\n')
+    s = re.sub(r'\n(?:\s*\n)*', '¶', s)
     if len(s) > mx: s = s[:mx] + '…'
     return dumps(s, ensure_ascii=False)
 
@@ -802,7 +802,7 @@ class RunResult(Msgs):
     def _line(self, m, maxlen):
         if m.has_error:
             e = first(o for o in m.output if o.get('output_type')=='error')
-            ln = f'{m.id}: {e["ename"]}: {e["evalue"]}'.replace('\n', '\\n')
+            ln = f'{m.id}: {e["ename"]}: {e["evalue"]}'.replace('\n', '¶')
         else: ln = f'{m.id}: ok'
         return ln if len(ln)<=maxlen else ln[:maxlen-1]+'…'
     def show(self,
