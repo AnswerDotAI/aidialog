@@ -96,7 +96,9 @@ def _to_dlg(x):
     if isinstance(x, Dialog): raise TypeError('dlg= takes an ipynb path; on a live Dialog, call the method instead')
     if x is None: x = _cur_dlg
     if x is None: raise ValueError('No dialog: pass a path, or call set_dlg() first')
-    return read_ipynb(x, cls=_cur_cls)
+    res = read_ipynb(x, cls=_cur_cls)
+    if res is None: raise FileNotFoundError(f'{x}: does not exist or could not be read')
+    return res
 
 def _load_dlg(x):
     "`(dialog, True)`: read `x` from disk; the second element marks it ours to save"
