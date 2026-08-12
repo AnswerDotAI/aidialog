@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.20
+
+### New Features
+
+- Use ¶ instead of \n escapes in preview lines, collapsing blank-line runs ([#37](https://github.com/AnswerDotAI/aidialog/issues/37))
+
+
 ## 0.0.19
 
 ### New Features
