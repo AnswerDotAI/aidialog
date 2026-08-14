@@ -14,7 +14,7 @@ __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'MAXLEN', 'AI_REND
            'dlg2md', 'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
-import asyncio, base64, copy, random, re, weakref
+import asyncio, base64, copy, random, re
 from ast import literal_eval
 from json import loads, dumps
 from fastcore.utils import *
@@ -124,6 +124,7 @@ class Message:
     # so files round-trip between hosts; subclasses may replace the dict wholesale but should keep these two.
     meta_attrs = dict(skipped='skipped', pinned='pinned')
     skipped, pinned = 0, 0  # class-level defaults; instances get real values via `**xtras` or cell metadata
+    __skip__ = ['dlg']  # ownership, not message state: `vars_pub` field lists (`flds`, copies) leave it out
 
     def __init__(self,
         content='', # The message text: markdown, code, or a prompt's request
@@ -146,7 +147,7 @@ class Message:
         if msg_type is UNSET: msg_type = snote
         if output   is UNSET: output=[] if msg_type in (scode, sprompt) else ''
         self.msg_type = msg_type # Set type first, since it clears output
-        self._dlg = weakref.ref(dlg) if dlg else None # weakref to avoid circular ref
+        self.dlg = dlg
         store_attr(but=['dlg', 'msg_type', 'xtras'])
         for k,v in xtras.items(): setattr(self, k, v)
 
@@ -185,14 +186,10 @@ class Message:
         result = cls.__new__(cls)
         memo[id(self)] = result
         for k, v in self.__dict__.items():
-            if k.startswith(('_msgidle','_dlg')): setattr(result, k, v)
+            if k.startswith('_msgidle') or k=='dlg': setattr(result, k, v)
             else: setattr(result, k, copy.deepcopy(v, memo))
         return result
 
-    @property
-    def dlg(self): return self._dlg() if self._dlg else None
-    @dlg.setter
-    def dlg(self, v): self._dlg = weakref.ref(v)
     @property
     def __flds__(self): return vars_pub(self) + ['content', 'output', 'msg_type']
     @property
