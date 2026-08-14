@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.21
+
+### New Features
+
+- Replace Message.dlg weakref with plain attribute, excluding it from field lists and copies via `__skip__` ([#39](https://github.com/AnswerDotAI/aidialog/issues/39))
+- Raise FileNotFoundError when a dlg= path cannot be read, instead of silently returning None ([#38](https://github.com/AnswerDotAI/aidialog/issues/38))
+
+
 ## 0.0.20
 
 ### New Features
