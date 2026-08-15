@@ -2,6 +2,6 @@
 
 Modules:
 
-- `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model"""
+- `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through aidialog's `Dialog` and `Message` classes"""
 
 __version__ = "0.0.22"
