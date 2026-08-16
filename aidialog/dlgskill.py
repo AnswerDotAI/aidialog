@@ -150,13 +150,15 @@ def view_msgs(
     *ids, # Message ids
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     nums:bool=True, # Show line numbers?
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     incl_out:bool=False, # Append each output (a prompt's reply, or code outputs) in an `<out>` block?
     trunc_out:bool=True, # Truncate each included output to ~512 chars?
 ):
     "Show several messages, each preceded by a `# msg <id>` header"
     d = _to_dlg(dlg)
-    return PrettyString('\n'.join(f"# msg {(m := d.msg(i)).id}\n{m.view(nums, lnhashs=lnhashs, incl_out=incl_out, trunc_out=trunc_out)}" for i in ids))
+    return PrettyString('\n'.join(f"# msg {(m := d.msg(i)).id}\n{m.view(nums, start_line, end_line, lnhashs, incl_out=incl_out, trunc_out=trunc_out)}" for i in ids))
 
 # %% ../nbs/04_dlgskill.ipynb #4c3b9190
 class FoundMsgs(Found, Msgs):
