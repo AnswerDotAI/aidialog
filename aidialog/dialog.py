@@ -853,14 +853,19 @@ def execute(self:Message,
     return (self.dlg or Dialog([self])).execute(self.id, shell=shell, timeout=timeout)
 
 # %% ../nbs/01_dialog.ipynb #103d7fb7
+def _inline_atts(m, text):
+    "Rewrite `attachment:` refs in `text` as data URIs from `m`'s attachments, making the Markdown self-contained"
+    for a in m.attachments: text = text.replace(f'attachment:{a.id}', f'data:{a.content_type};base64,{base64.b64encode(a.data).decode()}')
+    return text
+
 def msg2md(m,
     weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
 ):
-    "One message as Markdown: notes verbatim, code in a ```python fence with outputs in a `::: output` div, prompts and replies in `::: prompt`/`::: reply` divs; None for empty code"
-    if m.msg_type == snote: return m.content
+    "One message as Markdown: notes verbatim with attachments inlined as data URIs, code in a ```python fence with outputs in a `::: output` div, prompts and replies in `::: prompt`/`::: reply` divs; None for empty code"
+    if m.msg_type == snote: return _inline_atts(m, m.content)
     if m.msg_type == sraw: return fenced(m.content)
     if m.msg_type == sprompt:
-        parts = [fenced(m.content, ' prompt', ch=':')]
+        parts = [fenced(_inline_atts(m, m.content), ' prompt', ch=':')]
         if (ai := (m.ai_res or '')).strip(): parts.append(fenced(fmt_tools(ai), ' reply', ch=':'))
         return '\n\n'.join(parts)
     if weave: return render_text(m.output or []) or None
