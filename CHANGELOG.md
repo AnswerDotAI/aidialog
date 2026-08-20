@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.22
+
+### New Features
+
+- Inline message attachments as base64 data URIs in msg2md so projected Markdown is self-contained ([#41](https://github.com/AnswerDotAI/aidialog/issues/41))
+- Add `start_line`/`end_line` params to `view_msgs` for viewing message line ranges ([#40](https://github.com/AnswerDotAI/aidialog/issues/40))
+
+
 ## 0.0.21
 
 ### New Features
