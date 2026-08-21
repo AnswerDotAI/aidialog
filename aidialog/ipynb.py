@@ -133,20 +133,20 @@ def from_cells(self:Dialog, cells):
     return self
 
 # %% ../nbs/02_ipynb.ipynb #6bdaa293
-def reads_ipynb(txt, cls=Dialog, name='dialog'):
+def reads_ipynb(txt, cls=Dialog, name='dialog', verbose=False):
     "Read a dialog from notebook JSON string `txt`, constructing via `cls`"
     nb = json.loads(txt)
-    if repairs := repair_nb(nb): print('NB repair:', '; '.join(repairs))
+    if (repairs := repair_nb(nb)) and verbose: print('NB repair:', '; '.join(repairs))
     nb = dict2nb(nb)
     return cls(name=name, meta=dict(nb.get('metadata', {}))).from_cells(nb.cells)
 
 # %% ../nbs/02_ipynb.ipynb #7e8912e8
-def read_ipynb(fname, cls=Dialog, name=None):
+def read_ipynb(fname, cls=Dialog, name=None, verbose=False):
     "Read a dialog from notebook file `fname` (`.ipynb` added if missing), constructing via `cls`; `name` defaults to the file stem"
     f = Path(fname).expanduser()
     if f.suffix != '.ipynb': f = f.with_suffix('.ipynb')
     if not f.exists(): return print(f,'does not exist')
-    try: res = reads_ipynb(f.read_text(encoding='utf-8'), cls, name or f.stem)
+    try: res = reads_ipynb(f.read_text(encoding='utf-8'), cls, name or f.stem, verbose=verbose)
     except (json.JSONDecodeError, PermissionError): return
     res.path_ = f
     res.mtime_ = safe_mtime(f)
