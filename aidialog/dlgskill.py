@@ -57,42 +57,43 @@ from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
 
 
-# %% ../nbs/04_dlgskill.ipynb #278fa834
-_cur_dlg = None
-_cur_msgid = None
+# %% ../nbs/04_dlgskill.ipynb #e8e710e8
+cur_dlg_path = None
+cur_msgid = None
 _cur_cls = Dialog
 
+# %% ../nbs/04_dlgskill.ipynb #278fa834
 def set_dlg(
     fname, # ipynb path that later calls will default to
     cls=None, # `Dialog` subclass to read with from now on (None: keep current; initially `Dialog`)
 ):
     "Set the current dialog file, used by these functions when `dlg` is None"
-    global _cur_dlg, _cur_msgid, _cur_cls
-    _cur_dlg,_cur_msgid = Path(fname),None
+    global cur_dlg_path, cur_msgid, _cur_cls
+    cur_dlg_path,cur_msgid = Path(fname),None
     if cls: _cur_cls = cls
-    return _cur_dlg
+    return cur_dlg_path
 
 def cur_dlg():
     "A fresh `Dialog` read from the current dialog file (None if unset): the session-side entry to the ambient default"
-    return read_ipynb(_cur_dlg, cls=_cur_cls) if _cur_dlg else None
+    return read_ipynb(cur_dlg_path, cls=_cur_cls) if cur_dlg_path else None
 
 def set_cur_msg(
     id, # A `Message` or its id; None clears it
 ):
     "Set the current message, used by `add_msg` when no placement is given"
-    global _cur_msgid
-    _cur_msgid = id.id if isinstance(id, Message) else id
-    return _cur_msgid
+    global cur_msgid
+    cur_msgid = id.id if isinstance(id, Message) else id
+    return cur_msgid
 
 def cur_msg():
     "The current message, read fresh from the current dialog file (None if unset, or no longer there)"
     if (d := cur_dlg()) is None: return None
-    return first(m for m in d.messages if m.id==_cur_msgid)
+    return first(m for m in d.messages if m.id==cur_msgid)
 
 def _to_dlg(x):
     "The dialog file `x` (None: the current dialog file), read fresh from disk"
     if isinstance(x, Dialog): raise TypeError('dlg= takes an ipynb path; on a live Dialog, call the method instead')
-    if x is None: x = _cur_dlg
+    if x is None: x = cur_dlg_path
     if x is None: raise ValueError('No dialog: pass a path, or call set_dlg() first')
     res = read_ipynb(x, cls=_cur_cls)
     if res is None: raise FileNotFoundError(f'{x}: does not exist or could not be read')
@@ -518,7 +519,7 @@ def add_msg(
 ):
     "Add a new message before or after an existing one (default: after the current message, else at the end), returning it"
     d, sv = _load_dlg(dlg)
-    if dlg is None and before is None and after is None: after = first(m for m in d.messages if m.id==_cur_msgid)
+    if dlg is None and before is None and after is None: after = first(m for m in d.messages if m.id==cur_msgid)
     m = d.mk_message(source, msg_type=msg_type, meta=meta, export=export,
         before=None if before is None else d.msg(before), after=None if after is None else d.msg(after))
     _save(d, sv)
