@@ -473,9 +473,12 @@ def ast_finder(pattern):
 
 # %% ../nbs/04_dlgskill.ipynb #b6f8b9b3
 @patch
-def lnhashview(self:Message):
+def lnhashview(self:Message,
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
+):
     "Hash-addressed view of this message's content, for `Message.exhash`"
-    return self.view(lnhashs=True)
+    return self.view(start_line=start_line, end_line=end_line, lnhashs=True)
 
 @patch
 def exhash(self:Message,
@@ -491,9 +494,11 @@ def exhash(self:Message,
 def lnhashview_msg(
     id, # Message id, looked up in `dlg` (unique prefixes allowed)
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
 ):
     "Hash-addressed view of a message's content, for `msg_exhash`"
-    return _to_dlg(dlg).msg(id).lnhashview()
+    return _to_dlg(dlg).msg(id).lnhashview(start_line, end_line)
 
 def msg_exhash(
     id, # Message id, looked up in `dlg` (unique prefixes allowed)
