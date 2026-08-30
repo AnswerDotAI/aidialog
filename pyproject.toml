@@ -30,6 +30,14 @@ aidialog = "aidialog._modidx:d"
 [project.entry-points.pyskills]
 "aidialog.dlgskill" = "aidialog.dlgskill"
 
+[project.scripts]
+aidialog-summary = "aidialog.cli:summary_cli"
+aidialog-find = "aidialog.cli:find_cli"
+aidialog-view = "aidialog.cli:view_cli"
+aidialog-add = "aidialog.cli:add_cli"
+aidialog-del = "aidialog.cli:del_cli"
+aidialog-move = "aidialog.cli:move_cli"
+
 [tool.setuptools.dynamic]
 version = {attr = "aidialog.__version__"}
 
