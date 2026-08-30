@@ -36,7 +36,7 @@ The [`Dialog`](https://AnswerDotAI.github.io/aidialog/dialog.html#dialog) is the
 | canonical chat ([`Msg`](https://AnswerDotAI.github.io/aidialog/msg_parts.html#msg)/[`Part`](https://AnswerDotAI.github.io/aidialog/msg_parts.html#part)) | transmission, normalizing | [`chat2dlg`](https://AnswerDotAI.github.io/aidialog/hist.html#chat2dlg) | [`dlg2chat`](https://AnswerDotAI.github.io/aidialog/hist.html#dlg2chat) |
 | hist (live call input) | transmission, one-way |  | [`dlg2hist`](https://AnswerDotAI.github.io/aidialog/hist.html#dlg2hist) |
 | a prompt’s reply | self-similar | [`reply2dlg`](https://AnswerDotAI.github.io/aidialog/hist.html#reply2dlg) | [`dlg2reply`](https://AnswerDotAI.github.io/aidialog/hist.html#dlg2reply) |
-| XML views | display, one-way |  | [`view_dlg`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#view_dlg), [`msg2xml`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#msg2xml) |
+| XML views | display, one-way |  | [`view_dlg`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#view_dlg), [`msg2xml`](https://AnswerDotAI.github.io/aidialog/dialog.html#msg2xml) |
 
 The session codecs (in [llmsurgery](https://github.com/AnswerDotAI/llmsurgery)) route through chat on their way to the wire: ant’s `dlg2msgs` and oai’s `dlg2items` are each `denorm_msgs(dlg2chat(...))`.
 
@@ -67,11 +67,28 @@ A quick taste - create a dialog, add a message, and view it as concise XML:
 ``` python
 from aidialog.dlgskill import *
 import tempfile
+```
 
+``` python
 p = tempfile.mkdtemp() + '/demo.ipynb'
-create_dlg(p, '## A tiny dialog', 'note')
-add_msg('6*7', after=find_msgs(dlg=p)[0].id, dlg=p)
+d = create_dlg(p, '## A tiny dialog', 'note')
+add_msg('6*7', after=d.messages[0].id, dlg=p)
 view_dlg(p)
 ```
 
-    <dialog name="demo"><markdown id="470ae519">## A tiny dialog</markdown><code id="c836ce0c">6*7</code></dialog>
+    <dialog name="demo"><markdown id="1d693c32">## A tiny dialog</markdown><code id="02048a43">6*7</code></dialog>
+
+## Command line
+
+The flat commands expose dialog-aware reading and structural edits without a Python kernel:
+
+``` bash
+aidialog-summary nbs/00_core.ipynb
+aidialog-find nbs/00_core.ipynb 'read_csv' --context 1
+aidialog-view nbs/00_core.ipynb ab12cd34 --out
+aidialog-add nbs/00_core.ipynb --after ab12cd34 --msg-type code < new-cell.py
+aidialog-del nbs/00_core.ipynb ab12cd34
+aidialog-move nbs/00_core.ipynb ab12cd34,ef56ab78 --before 9012cdef
+```
+
+Message ID arguments are comma-separated where a command accepts several. Mutating commands accept `--dry-run`; run any command with `--help` for its full filters and display options.
