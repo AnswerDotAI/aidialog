@@ -178,7 +178,7 @@ class Message:
         if self.msg_type != sprompt: return ''
         if isinstance(self.output, str): return self.output  # Handle legacy/direct string
         if res := first(L(self.output).filter(lambda x: nested_idx(x, 'metadata', 'is_ai_res'))):
-            return nested_idx(res, 'data', 'text/markdown') or ''
+            return join_out(nested_idx(res, 'data', 'text/markdown')) or ''
         return ''
 
     def __deepcopy__(self, memo):
