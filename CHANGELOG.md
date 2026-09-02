@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.25
+
+### New Features
+
+- Render a server tool call's `text` as its result ([#49](https://github.com/AnswerDotAI/aidialog/pull/49)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.24
 
 ### New Features
