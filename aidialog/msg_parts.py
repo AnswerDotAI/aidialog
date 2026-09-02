@@ -473,9 +473,9 @@ def doc(self:Thinking, showthink=False, mx=2000):
 def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summary(self)} ⏳\n"
 @patch
 def doc(self:ToolUse, showthink=False, mx=2000):
-    "A server call's result is implicit, so it renders as a completed block; any other pending call is an ⏳ row"
+    "A server call renders as a completed block, its `text` (the provider's result, when it gave one) as the result; any other pending call is an ⏳ row"
     if not self.server: return self.formatted.strip()
-    return mk_tr_details(self.replace(text='Server tool call executed.'), mx=mx).strip()
+    return mk_tr_details(self.replace(text=self.text or 'Server tool call executed.'), mx=mx).strip()
 
 @patch(as_prop=True)
 def formatted(self:ToolResult): return mk_tr_details(self)
