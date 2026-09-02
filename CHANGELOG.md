@@ -2,6 +2,19 @@
 
 <!-- do not remove -->
 
+## 0.0.23
+
+### New Features
+
+- Add kernel-free dialog navigation and editing commands ([#46](https://github.com/AnswerDotAI/aidialog/pull/46)), thanks to [@jph00](https://github.com/jph00)
+- Add start_line and end_line params to lnhashview and lnhashview_msg ([#44](https://github.com/AnswerDotAI/aidialog/issues/44))
+- Serialize prompts as code cells with %%prompt and output-stored replies; home code-cell attachments in nb metadata ([#43](https://github.com/AnswerDotAI/aidialog/issues/43))
+
+### Bugs Squashed
+
+- Attachment references accept any attachment id ([#47](https://github.com/AnswerDotAI/aidialog/pull/47)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.22
 
 ### New Features
