@@ -118,7 +118,7 @@ def prep_img(self:Message, data, mime, max_im_sz=None):
 def _media_atts(msg, aim_info, max_im_sz=None):
     "Build media context from a message's attachments that are referenced in the content."
     attids = set()
-    attids.update(re.findall(r'!\[[^\]]*\]\(attachment:([0-9a-f-]{36})\)', msg.content))
+    attids.update(re.findall(r'!\[[^\]]*\]\(attachment:([^)]+)\)', msg.content))
     attids.update(re.findall(r'<!-- last_output:([0-9a-f-]{36}) -->', msg.content))
     atts = L(msg.attachments).filter(lambda o: o in sorted(attids))
     return list(chain.from_iterable(media_item('content', o.id, o.data, aim_info=aim_info, max_im_sz=max_im_sz,
