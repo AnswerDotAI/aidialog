@@ -4,4 +4,4 @@ Modules:
 
 - `aidialog.dlgskill`: Read, search, and edit dialogs and notebooks through aidialog's `Dialog` and `Message` classes"""
 
-__version__ = "0.0.24"
+__version__ = "0.0.25"
