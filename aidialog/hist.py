@@ -6,12 +6,12 @@ Docs: https://AnswerDotAI.github.io/aidialog/hist.html.md"""
 
 # %% auto #0
 __all__ = ['UNSUPPORTED_MSG', 'im_max', 'IMG_TOKS', 'expr_pat', 'expr_mtypes', 'jwrap', 'to_local_time', 'media_item',
-           'resize_img', 'output_parts', 'merge_media', 'get_refs', 'sigil_pat', 'get_exprs', 'vars_tag', 'vars_hist',
-           'is_nameerr', 'task_tags', 'warning_tag', 'dlg2hist', 'reply2chat', 'dlg2chat', 'chat2dlg', 'reply2dlg',
-           'dlg2reply']
+           'resize_img', 'pdf_pages', 'output_parts', 'merge_media', 'get_refs', 'sigil_pat', 'get_exprs', 'vars_tag',
+           'vars_hist', 'is_nameerr', 'task_tags', 'warning_tag', 'dlg2hist', 'reply2chat', 'dlg2chat', 'chat2dlg',
+           'reply2dlg', 'dlg2reply']
 
 # %% ../nbs/03_hist.ipynb #40ac6466
-import re, ast, base64, binascii, hashlib
+import re, ast, base64, binascii, hashlib, zlib
 from ast import literal_eval
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -113,6 +113,13 @@ def resize_img(data:bytes, max_im_sz=im_max):
 def prep_img(self:Message, data, mime, max_im_sz=None):
     "Resize raster images before they enter LLM context, so they don't consume too many tokens"
     return resize_img(data, max_im_sz or im_max) if mime in IMG_MIMES else data
+
+# %% ../nbs/03_hist.ipynb #215e15e2
+_pdf_count = re.compile(rb'/Type\s*/Pages[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages', re.S)
+def pdf_pages(b:bytes):
+    "Page count of PDF `b`: the largest `/Count` on a `/Pages` node, in the clear or inside an inflated object stream"
+    objs = [b] + [zlib.decompressobj().decompress(b[m.end():]) for m in re.finditer(rb'/Type\s*/ObjStm.*?stream\r?\n', b, re.S)]
+    return max((int(a or c) for o in objs for a,c in _pdf_count.findall(o)), default=0)
 
 # %% ../nbs/03_hist.ipynb #c9792733
 def _media_atts(msg, aim_info, max_im_sz=None):

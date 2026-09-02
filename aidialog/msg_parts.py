@@ -7,10 +7,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'fence_call_re', 'Part', 'Text',
            'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputVideo', 'InputFile', 'mk_part', 'Msg',
-           'ToolUse', 'ToolResult', 'ServerToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
-           'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
-           'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
-           'StopResponse', 'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
+           'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text', 'part_txt', 'data_url',
+           'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools', 'extract_fence_call',
+           'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse', 'StopResponse',
+           'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
 import base64, json, copy
@@ -41,7 +41,7 @@ class Part(BasicRepr):
         return res
 
 # %% ../nbs/00_msg_parts.ipynb #5342db55
-PartType = str_enum('PartType', 'text', 'thinking', 'refusal', 'tool_use', 'server_tool_result', 'tool_result',
+PartType = str_enum('PartType', 'text', 'thinking', 'refusal', 'tool_use', 'tool_result',
                     'input_image', 'input_audio', 'input_video', 'input_file')
 
 # %% ../nbs/00_msg_parts.ipynb #48496c08
@@ -101,10 +101,11 @@ def _repr_markdown_(self:Part):
 
 # %% ../nbs/00_msg_parts.ipynb #ae349c18
 class Msg(BasicRepr):
-    "A normalized message."
+    "A normalized message; `raw` is the wire form it was parsed from, when a provider produced it."
     def __init__(self,
         role,   # 'user', 'assistant', or 'tool'
-        content # list of `Part`
+        content, # list of `Part`
+        raw=None # The provider's message as received, replayed verbatim to the same provider
     ):
         store_attr()
 
@@ -135,11 +136,6 @@ class _ToolPart(Part):
 
 class ToolUse  (_ToolPart, tag=PartType.tool_use   ): "A tool invocation; `server` marks one the provider ran itself."
 class ToolResult(_ToolPart, tag=PartType.tool_result): "A tool call's result, `text` holding the output."
-class ServerToolResult(Part, tag=PartType.server_tool_result):
-    "A provider-side tool result, kept as `raw` for round-trips."
-    def __init__(self, text=None, **kw):
-        super().__init__(**kw)
-        store_attr('text')
 
 # %% ../nbs/00_msg_parts.ipynb #195b4d89
 @patch
@@ -370,10 +366,9 @@ def tool_text(
 # %% ../nbs/00_msg_parts.ipynb #ade55a7b
 def _extract_tool_parts(d:dict):
     "Build (tool_use_part, tool_result_part) from a parsed `{.tool}` block"
-    # Skip server tool calls in deserialization (round trip issues with Gemini/Anthropic)
-    if not d or d.get('server') or d.get('id') is None: return None
-    tu = ToolUse   (id=d['id'], name=d['name'], arguments=d.get('args') or {})
-    tr = ToolResult(id=d['id'], name=d['name'], text=tool_text(d.get('result')))
+    if not d or d.get('id') is None: return None
+    tu = ToolUse   (id=d['id'], name=d['name'], arguments=d.get('args') or {}, server=d.get('server', False))
+    tr = ToolResult(id=d['id'], name=d['name'], text=tool_text(d.get('result')), server=d.get('server', False))
     return tu, tr
 
 # %% ../nbs/00_msg_parts.ipynb #916f8df0
@@ -503,7 +498,7 @@ def hist2fmt(msgs:list[Msg], mx=2000, showthink=False)->str:
     for m in msgs:
         if m.role == 'assistant':
             for p in m.content:
-                if isinstance(p, ToolUse) and not p.server: tus[p.id] = p
+                if isinstance(p, ToolUse): tus[p.id] = p
                 else: out.append(p.doc(showthink=showthink, mx=mx))
         elif m.role == 'tool':
             for p in m.content:
