@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.24
+
+### New Features
+
+- Carry a provider's raw message on `Msg`, keep server tool calls as ordinary pairs, and count PDF pages without pypdf ([#48](https://github.com/AnswerDotAI/aidialog/pull/48)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.23
 
 ### New Features
