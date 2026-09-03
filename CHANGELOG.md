@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.26
+
+### New Features
+
+- Add `msg2dict` and `dict2msg` ([#50](https://github.com/AnswerDotAI/aidialog/pull/50)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.25
 
 ### New Features

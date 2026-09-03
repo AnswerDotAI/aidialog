@@ -42,7 +42,7 @@ class Part(BasicRepr):
 
 # %% ../nbs/00_msg_parts.ipynb #5342db55
 PartType = str_enum('PartType', 'text', 'thinking', 'refusal', 'tool_use', 'tool_result',
-                    'input_image', 'input_audio', 'input_video', 'input_file')
+    'input_image', 'input_audio', 'input_video', 'input_file')
 
 # %% ../nbs/00_msg_parts.ipynb #48496c08
 class Text(Part, tag=PartType.text):
@@ -63,17 +63,21 @@ class Refusal(Part, tag=PartType.refusal):
         super().__init__(**kw)
         store_attr('text')
 
+# %% ../nbs/00_msg_parts.ipynb #bd756d30
 class Media(Part):
     "Media content: `text` is a URL or data URL."
     def __init__(self, text=None, mime=None, **kw):
         super().__init__(**kw)
         store_attr('text,mime')
 
+# %% ../nbs/00_msg_parts.ipynb #79e8bdeb
+# chkstyle: skip
 class InputImage(Media, tag=PartType.input_image): "An image input."
 class InputAudio(Media, tag=PartType.input_audio): "An audio input."
 class InputVideo(Media, tag=PartType.input_video): "A video input."
 class InputFile (Media, tag=PartType.input_file ): "A file input."
 
+# %% ../nbs/00_msg_parts.ipynb #3c5ecde9
 def mk_part(type, **kw):
     "The `Part` subclass registered for wire tag `type`, built from `kw`"
     return Part.reg[type](**kw)
@@ -159,6 +163,7 @@ def _repr_markdown_(self:ToolUse):
 
 :::"""
 
+# %% ../nbs/00_msg_parts.ipynb #fd4a1cb9
 def display_list(l): 
     from IPython.display import Markdown, display
     display(Markdown('\n\n'.join(o._repr_markdown_() for o in l)))
@@ -181,7 +186,7 @@ class Completion(BasicRepr):
 def mk_tool_res_msg(tool_calls:list[ToolUse], results:list[str|list]):
     'A util to prepare parallel tool call with str or media list results'
     parts = [ToolResult(id=tc.id, name=tc.name, arguments=tc.arguments, server=tc.server, text=res)
-             for tc,res in zip(tool_calls, results)]
+        for tc,res in zip(tool_calls, results)]
     return Msg(role="tool", content=parts)
 
 # %% ../nbs/00_msg_parts.ipynb #07b612b3
@@ -204,6 +209,7 @@ def _fetch_url_partial(url, nbytes=512):
     except (httpx.HTTPError, httpx.InvalidURL): return None, None
 
 # %% ../nbs/00_msg_parts.ipynb #b6f61273
+# chkstyle: skip
 _ext_mime = {
     '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml',
     '.pdf':'application/pdf',
@@ -253,6 +259,7 @@ def _url2content(o):
     mime = o.mime or url_mime(o.url)
     return _mime2part_cls(mime)(o.url, mime=mime)
 
+# %% ../nbs/00_msg_parts.ipynb #f6d85345
 def mk_content(o):
     "Convert a content value (str, bytes, `MediaUrl`, or already a `Part`) to a canonical `Part`"
     if isinstance(o, str):        return Text(o)
@@ -471,6 +478,7 @@ def formatted(self:Part): return self.text or ''
 @patch
 def doc(self:Part, showthink=False, mx=2000): return (self.text or '').strip()
 
+# %% ../nbs/00_msg_parts.ipynb #95ce74e7
 @patch(as_prop=True)
 def formatted(self:Thinking): return (self.text or '') if self.showthink else '🧠'
 @patch
@@ -478,6 +486,7 @@ def doc(self:Thinking, showthink=False, mx=2000):
     if not (showthink and self.text): return ''
     return f'{think_start}\n::: details\n\n## Thinking\n\n{self.text.strip()}\n\n:::\n{think_end}'
 
+# %% ../nbs/00_msg_parts.ipynb #28315174
 @patch(as_prop=True)
 def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summary(self)} ⏳\n"
 @patch
@@ -486,6 +495,7 @@ def doc(self:ToolUse, showthink=False, mx=2000):
     if not self.server: return self.formatted.strip()
     return mk_tr_details(self.replace(text=self.text or 'Server tool call executed.'), mx=mx).strip()
 
+# %% ../nbs/00_msg_parts.ipynb #76ba88f5
 @patch(as_prop=True)
 def formatted(self:ToolResult): return mk_tr_details(self)
 @patch
