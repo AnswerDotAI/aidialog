@@ -7,10 +7,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'fence_call_re', 'Part', 'Text',
            'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputVideo', 'InputFile', 'mk_part', 'Msg',
-           'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text', 'part_txt', 'data_url',
-           'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools', 'extract_fence_call',
-           'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse', 'StopResponse',
-           'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
+           'msg2dict', 'dict2msg', 'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
+           'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
+           'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
+           'StopResponse', 'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
 import base64, json, copy
@@ -88,7 +88,7 @@ def _trunc_strs(o, n=200):
 
 @patch
 def _repr_markdown_(self:Part):
-    flds = '\n'.join(f"- {k}: `{_trunc_strs(getattr(self,k))}`" for k in self.__stored_args__ if k not in ('text','cache_control'))
+    flds = '\n'.join(f"- {k}: `{_trunc_strs(getattr(self,k))}`" for k in self.__dict__ if k[0] != '_' and k not in ('text','cache_control'))
     return f"""**{type(self).__name__}** (`{self.type}`)
 
 {_trunc_strs(self.text) if self.text else ''}
@@ -125,6 +125,15 @@ class Msg(BasicRepr):
 {'\n\n'.join(p._repr_markdown_() for p in self.content)}
 
 </contents>"""
+
+# %% ../nbs/00_msg_parts.ipynb #1e8b8ce5
+def msg2dict(m):
+    "`m` as a JSON-ready dict, each part tagged with its wire `type`"
+    return dict(role=m.role, content=[dict(type=p.type, **{k:v for k,v in p.__dict__.items() if k[0] != '_'}) for p in m.content], raw=m.raw)
+
+def dict2msg(d):
+    "The `Msg` that `msg2dict` produced `d` from"
+    return Msg(d['role'], [mk_part(**p) for p in d['content']], d.get('raw'))
 
 # %% ../nbs/00_msg_parts.ipynb #3cbac5be
 class _ToolPart(Part):
