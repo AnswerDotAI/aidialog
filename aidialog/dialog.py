@@ -865,18 +865,21 @@ def _inline_atts(m, text):
 def msg2md(m,
     weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
 ):
-    "One message as Markdown: notes verbatim with attachments inlined as data URIs, code in a ```python fence with outputs in a `::: output` div, prompts and replies in `::: prompt`/`::: reply` divs; None for empty code"
+    "Render one message as Markdown, applying `include`, `echo`, and `output` directives to code messages"
     if m.msg_type == snote: return _inline_atts(m, m.content)
     if m.msg_type == sraw: return fenced(m.content)
     if m.msg_type == sprompt:
         parts = [fenced(_inline_atts(m, m.content), ' prompt', ch=':')]
         if (ai := (m.ai_res or '')).strip(): parts.append(fenced(fmt_tools(ai), ' reply', ch=':'))
         return '\n\n'.join(parts)
-    if weave: return render_text(m.output or []) or None
-    if not m.content.strip(): return None
-    parts = [fenced(m.content, 'python')]
-    if (outs := render_md(m.output or [])): parts.append(fenced(outs, ' output', ch=':'))
-    return '\n\n'.join(parts)
+    if m.directive('include')=='false': return None
+    outdir = m.directive('output')
+    if weave: return None if outdir=='false' else render_text(m.output or []) or None
+    parts = [] if m.directive('echo')=='false' or not m.content.strip() else [fenced(m.content, 'python')]
+    if outdir!='false':
+        rf, wrap = (render_text, noop) if outdir=='asis' else (render_md, partial(fenced, info=' output', ch=':'))
+        if outs := rf(m.output or []): parts.append(wrap(outs))
+    return '\n\n'.join(parts) or None
 
 def dlg2md(d,
     exportfilter:bool=False, # Keep only the messages `export_filter` selects?
