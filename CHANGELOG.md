@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.27
+
+### New Features
+
+- MdStr marks a tool result as markdown ([#51](https://github.com/AnswerDotAI/aidialog/pull/51)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.26
 
 ### New Features
