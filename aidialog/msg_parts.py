@@ -10,7 +10,7 @@ __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 'r
            'msg2dict', 'dict2msg', 'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
            'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
            'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
-           'StopResponse', 'FullResponse', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
+           'StopResponse', 'FullResponse', 'MdStr', 'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
 import base64, json, copy
@@ -46,7 +46,7 @@ PartType = str_enum('PartType', 'text', 'thinking', 'refusal', 'tool_use', 'tool
 
 # %% ../nbs/00_msg_parts.ipynb #48496c08
 class Text(Part, tag=PartType.text):
-    "Plain text content."
+    "Plain text content; `citations` lists the sources it rests on as `url_citation` dicts (`url`, `title`, optional `start_index`/`end_index`)"
     def __init__(self, text=None, citations=None, **kw):
         super().__init__(**kw)
         store_attr('text,citations')
@@ -268,7 +268,7 @@ def mk_content(o):
     return o
 
 # %% ../nbs/00_msg_parts.ipynb #ee9c825e
-tool_info = 'json {.tool}'     # fence info string of a tool block: {id, name, args, result} (+server; `error` reserved)
+tool_info = 'json {.tool}'     # fence info string of a tool block: {id, name, args, result} (+server, md; `error` reserved)
 usage_info = 'json {.usage}'   # fence info string of a usage block: UsageStats fields
 
 def parse_tools(s):
@@ -384,7 +384,8 @@ def _extract_tool_parts(d:dict):
     "Build (tool_use_part, tool_result_part) from a parsed `{.tool}` block"
     if not d or d.get('id') is None: return None
     tu = ToolUse   (id=d['id'], name=d['name'], arguments=d.get('args') or {}, server=d.get('server', False))
-    tr = ToolResult(id=d['id'], name=d['name'], text=tool_text(d.get('result')), server=d.get('server', False))
+    text = tool_text(d.get('result'))
+    tr = ToolResult(id=d['id'], name=d['name'], text=MdStr(text) if d.get('md') else text, server=d.get('server', False))
     return tu, tr
 
 # %% ../nbs/00_msg_parts.ipynb #916f8df0
@@ -428,6 +429,7 @@ class ToolResponse(BasicRepr):
 # %% ../nbs/00_msg_parts.ipynb #86265805
 class StopResponse(str): pass
 class FullResponse(str): pass
+class MdStr(str): pass
 
 # %% ../nbs/00_msg_parts.ipynb #4f105e4d
 def trunc_str(s, mx=2000, skip=10, replace="TRUNCATED"):
@@ -470,6 +472,7 @@ def mk_tr_details(tr, mx=2000):
     args = {k:trunc_str(v, mx=None if mx is None else mx*5) if isinstance(v, str) else v for k,v in tr.arguments.items()}
     res = dict(id=tr.id, name=tr.name, args=args, result=trunc_str(tool_text(tr.text), mx=mx))
     if tr.server: res['server'] = True
+    if isinstance(tr.text, MdStr): res['md'] = True
     return "\n\n" + fenced(dumps(res, indent=2, ensure_ascii=False), tool_info) + "\n\n"
 
 # %% ../nbs/00_msg_parts.ipynb #70d1e8c3

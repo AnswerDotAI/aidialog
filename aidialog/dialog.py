@@ -687,7 +687,7 @@ def _code_span(txt):
 _code_args = {'py':'code', 'python':'code', 'bash':'cmd'}
 
 def tool_md(d):
-    "Display markdown for one parsed `{.tool}` block: a folded details div labeled `func(params)→result`, code tools shown as code"
+    "Display markdown for one parsed `{.tool}` block: a folded details div labeled `func(params)→result`, code shown as code, the result fenced unless the block marks it `md`"
     params = ', '.join(f"{k}={_fmt_param(v)}" for k,v in (d.get('args') or {}).items())
     res = d.get('result')
     tail = f"→{_fmt_param(res)}" if res not in (None, '') else ''
@@ -696,7 +696,9 @@ def tool_md(d):
     if code is not None:
         body = f"Code:\n{fenced(str(code), d.get('name'))}"
         if str(res or '').strip(): body += f"\n\nOutput:\n\n{fenced(str(res))}"
-    else: body = fenced(dumps(d, indent=2, ensure_ascii=False), 'json')
+    else:
+        body = f"Args:\n{fenced(dumps(d.get('args') or {}, indent=2, ensure_ascii=False), 'json')}"
+        if str(res or '').strip(): body += f"\n\n{res}" if d.get('md') else f"\n\nOutput:\n\n{fenced(str(res))}"
     return fenced(f"## {label}\n\n{body}", ' {.details .tool-usage-details}', ch=':')
 
 def usage_md(d):
