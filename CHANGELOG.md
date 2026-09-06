@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.28
+
+### New Features
+
+- Condense the dialog pyskill and make its workflow self-contained ([#52](https://github.com/AnswerDotAI/aidialog/pull/52)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.27
 
 ### New Features
