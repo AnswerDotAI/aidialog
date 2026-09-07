@@ -492,10 +492,10 @@ def add_output(self:Message,
     display_id = nested_idx(jmsg, 'content', 'transient', 'display_id')
     if isupd := mt=='update_display_data':
         assert display_id
-        jmsg['msg_type'] = jmsg['header']['msg_type'] = 'display_data'
+        jmsg = jmsg | dict(msg_type='display_data')
     out = msg2out(jmsg)
     if trunc: out = trunc(out)
-    if display_id: out['metadata']['did'] = display_id
+    if display_id: out['metadata'] = out['metadata'] | dict(did=display_id)
     if isupd:
         for i,o in enumerate(self.output):
             if nested_idx(o, 'metadata', 'did')==display_id:
