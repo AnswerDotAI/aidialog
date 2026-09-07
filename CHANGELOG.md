@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.29
+
+### New Features
+
+- `set_dlg`: expand ~ and resolve fname to an absolute path so the current dialog is unaffected by later directory changes ([#53](https://github.com/AnswerDotAI/aidialog/issues/53))
+
+### Bugs Squashed
+
+- avoid mutation ([#54](https://github.com/AnswerDotAI/aidialog/issues/54))
+
+
 ## 0.0.28
 
 ### New Features
