@@ -78,6 +78,8 @@ view_dlg(p)
 
     <dialog name="demo"><markdown id="1d693c32">## A tiny dialog</markdown><code id="02048a43">6*7</code></dialog>
 
+To make a file the default for subsequent calls, use `set_dlg(p)`. It expands `~` and resolves an absolute path immediately, so the current dialog stays the same after `%cd` or another working-directory change.
+
 ## Command line
 
 The flat commands expose dialog-aware reading and structural edits without a Python kernel:
