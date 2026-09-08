@@ -874,7 +874,9 @@ def _fold(m, code):
     fold = m.directive('code-fold')
     if fold not in ('', 'true', 'show'): return code
     attrs = ' {.details .code-fold' + (' open=""' if fold=='show' else '') + '}'
-    return fenced(f"## {m.directive('code-summary') or 'Code'}\n\n{code}", attrs, ch=':')
+    summary = m.directive('code-summary') or 'Code'
+    if len(summary)>1 and summary[0] in "\"'" and summary[-1]==summary[0]: summary = summary[1:-1]
+    return fenced(f"## {summary}\n\n{code}", attrs, ch=':')
 
 def msg2md(m,
     weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
