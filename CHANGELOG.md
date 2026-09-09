@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.30
+
+### New Features
+
+- Message previews show node size and missing count separately ([#57](https://github.com/AnswerDotAI/aidialog/pull/57)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.29
 
 ### New Features
