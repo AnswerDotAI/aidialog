@@ -538,6 +538,13 @@ def has_directive(self:Message, name):
     "Does this message carry directive `name`, in content or meta?"
     return name in self.directives
 
+@patch(as_prop=True)
+def body(self:Message):
+    "Content with leading directive comments removed; cell magics kept"
+    c = mk_cell(self.content, metadata=self.meta)
+    c.remove_directives()
+    return c.source
+
 # %% ../nbs/01_dialog.ipynb #e4fb159d
 @patch
 def update(self:Message,
@@ -862,21 +869,34 @@ def _inline_atts(m, text):
     for a in m.attachments: text = text.replace(f'attachment:{a.id}', f'data:{a.content_type};base64,{base64.b64encode(a.data).decode()}')
     return text
 
+def _fold(m, code):
+    "Wrap `code` in a `::: {.details .code-fold}` div when `m` has `code-fold: true|show`, labelled by `code-summary`"
+    fold = m.directive('code-fold')
+    if fold not in ('', 'true', 'show'): return code
+    attrs = ' {.details .code-fold' + (' open=""' if fold=='show' else '') + '}'
+    summary = m.directive('code-summary') or 'Code'
+    if len(summary)>1 and summary[0] in "\"'" and summary[-1]==summary[0]: summary = summary[1:-1]
+    return fenced(f"## {summary}\n\n{code}", attrs, ch=':')
+
 def msg2md(m,
     weave:bool=False, # Code messages contribute only `render_text` over their outputs, as document prose?
 ):
-    "One message as Markdown: notes verbatim with attachments inlined as data URIs, code in a ```python fence with outputs in a `::: output` div, prompts and replies in `::: prompt`/`::: reply` divs; None for empty code"
+    "Render one message as Markdown; a code message applies its `include`, `echo`, `output`, and `code-fold` directives and hides the directive lines"
     if m.msg_type == snote: return _inline_atts(m, m.content)
     if m.msg_type == sraw: return fenced(m.content)
     if m.msg_type == sprompt:
         parts = [fenced(_inline_atts(m, m.content), ' prompt', ch=':')]
         if (ai := (m.ai_res or '')).strip(): parts.append(fenced(fmt_tools(ai), ' reply', ch=':'))
         return '\n\n'.join(parts)
-    if weave: return render_text(m.output or []) or None
-    if not m.content.strip(): return None
-    parts = [fenced(m.content, 'python')]
-    if (outs := render_md(m.output or [])): parts.append(fenced(outs, ' output', ch=':'))
-    return '\n\n'.join(parts)
+    if m.directive('include')=='false': return None
+    outdir = m.directive('output')
+    if weave: return None if outdir=='false' else render_text(m.output or []) or None
+    src = m.body
+    parts = [] if m.directive('echo')=='false' or not src.strip() else [_fold(m, fenced(src, 'python'))]
+    if outdir!='false':
+        rf, wrap = (render_text, noop) if outdir=='asis' else (render_md, partial(fenced, info=' output', ch=':'))
+        if outs := rf(m.output or []): parts.append(wrap(outs))
+    return '\n\n'.join(parts) or None
 
 def dlg2md(d,
     exportfilter:bool=False, # Keep only the messages `export_filter` selects?
