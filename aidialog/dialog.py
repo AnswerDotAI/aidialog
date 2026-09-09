@@ -167,6 +167,9 @@ class Message:
     @DepProp
     def content(self): self.clear_inp_cache()
 
+    @content.norm
+    def content(self, v): return '' if v is None else v
+
     @DepProp
     def msg_type(self):
         self.clear_out_cache()
