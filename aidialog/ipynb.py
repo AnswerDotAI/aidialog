@@ -121,14 +121,13 @@ def _v2_to_v3(nb):
         for o in c.get('outputs', []):
             md = nested_idx(o, 'metadata', 'is_ai_res') and nested_idx(o, 'data', 'text/markdown')
             if not md: continue
-            if isinstance(md, list): md = ''.join(md)
             if '-usage-details' in md: o['data']['text/markdown'] = conv_tools(md)
 
 # %% ../nbs/02_ipynb.ipynb #migratenb
 _migrations = {1:_v1_to_v2, 2:_v2_to_v3}
 
 def migrate_nb(nb):
-    "Upgrade a notebook in place. Return whether its version changed"
+    "Upgrade a normalized notebook in place. Return whether its version changed"
     ver = nb_ver(nb)
     if not 1 <= ver <= CUR_VER: raise ValueError(f'Unsupported notebook version: {ver}')
     for v in range(ver, CUR_VER):
@@ -217,9 +216,10 @@ def reads_ipynb(txt, cls=Dialog, name='dialog', verbose=False):
     "Read a dialog from notebook JSON string `txt`, constructing via `cls`"
     nb = json.loads(txt)
     if (repairs := repair_nb(nb)) and verbose: print('NB repair:', '; '.join(repairs))
-    migrated = migrate_nb(nb)
     unhome_atts(nb)
     nb = dict2nb(nb)
+    migrated = migrate_nb(nb)
+    unhome_atts(nb)
     res = cls(name=name, meta=dict(nb.get('metadata', {}))).from_cells(nb.cells)
     res.migrated_ = migrated
     return res
