@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.31
+
+### New Features
+
+- Rewrite docstrings and narrative docs across aidialog modules for clearer ([#58](https://github.com/AnswerDotAI/aidialog/issues/58))
+
+
 ## 0.0.30
 
 ### New Features
