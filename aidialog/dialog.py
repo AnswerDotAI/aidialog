@@ -22,7 +22,8 @@ from fastcore.meta import delegates
 from fastcore.xml import to_xml
 from fastcore.tools import lnhash
 from fastcore.ansi import strip_ansi
-from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES,deep_merge,find_id,Found,render_text,select_cells,item2xml
+from fastcore.nbio import mk_cell,dir_tag,msg2out,preferred_msg_out,concat_streams,join_out,IMG_MIMES,deep_merge
+from fastcore.nbio import find_id,Found,render_text,select_cells,item2xml,prev_line
 from .msg_parts import strip_tools as _strip_tools
 
 # %% ../nbs/01_dialog.ipynb #9d79a4b9
@@ -203,19 +204,15 @@ add_id_hash(Message, 'id')
 Dialog.msg_cls = Message
 
 # %% ../nbs/01_dialog.ipynb #145c8a42
-def _prev_line(txt, maxlen, pre=''):
-    "One ¶-joined preview line, `pre`+`txt` capped at `maxlen`, ending in a humanized `[size]` when `txt` was cut"
-    return truncstr(re.sub(r'\n(?:\s*\n)*', '¶', pre+txt), maxlen, suf=f'…[{humanize(len(txt))}]')
-
 @patch
 def preview(self:Message,
     maxlen:int=MAXLEN, # Maximum characters per line
     sep:str=':', # Separator before the content; a find shows `-` on context rows
 ):
-    "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead"
+    "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead. A cut row carries its size before the separator and ends with the count of characters missing"
     txt = self.content or (f"<{self.meta['rec_kind']}>" if self.meta.get('rec_kind') else '')
-    res = _prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}{sep}")
-    if self.msg_type==sprompt and self.ai_res: return res + '\n' + _prev_line(self.ai_res, maxlen, '> ')
+    res = prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}", sep)
+    if self.msg_type==sprompt and self.ai_res: return res + '\n' + prev_line(self.ai_res, maxlen, '>', ' ')
     if self.output: res += f" ⇒ out({humanize(len(str(self.output)))})"
     return res
 
