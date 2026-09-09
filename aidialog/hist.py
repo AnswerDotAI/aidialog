@@ -96,7 +96,7 @@ im_max = 768**2   # image-area budget for LLM context: OpenAI high detail = exac
 IMG_TOKS = 765    # assumed tokens per context image at `im_max`: OpenAI 85 base + 4*170 per tile
 
 def resize_img(data:bytes, max_im_sz=im_max):
-    "Resize `data` so that its area is <= `max_im_sz` total pixels; passthrough without pillow"
+    "Limit image area to `max_im_sz` pixels. Return the original bytes without Pillow."
     try: from PIL import Image as PImg
     except ImportError: return data
     img = PImg.open(BytesIO(data))
@@ -111,7 +111,7 @@ def resize_img(data:bytes, max_im_sz=im_max):
 
 @patch
 def prep_img(self:Message, data, mime, max_im_sz=None):
-    "Resize raster images before they enter LLM context, so they don't consume too many tokens"
+    "Limit raster image area before adding it to LLM context."
     return resize_img(data, max_im_sz or im_max) if mime in IMG_MIMES else data
 
 # %% ../nbs/03_hist.ipynb #215e15e2
@@ -153,12 +153,12 @@ def _img_output(m, aim_info, max_im_sz):
 
 # %% ../nbs/03_hist.ipynb #716d50cf
 def output_parts(m, aim_info=None, max_im_sz=None):
-    "Media `Part`s for a code message's outputs: gated, resized, id-tagged, with unavailable fallbacks; images enabled if `aim_info` is None"
+    "Prepare code output images and their tags as `Part` objects. Images default to enabled."
     if aim_info is None: aim_info = dict(supports_vision=True)
     return [mk_content(o) for o in _img_output(m, aim_info, max_im_sz)]
 
 def merge_media(text, parts):
-    "Compose rendered `text` with media `parts`: media first (tag adjacency kept), text last; with no images, notes fold into the text"
+    "Combine output text and media parts. Return a string when no images remain."
     has_img = any(isinstance(p, InputImage) for p in parts)
     if not has_img: return '\n\n'.join(filter(None, [text, *(p.text for p in parts)]))
     return [*parts, *([Text(text)] if text else [])]
@@ -166,13 +166,13 @@ def merge_media(text, parts):
 # %% ../nbs/03_hist.ipynb #1e8a1f1b
 @patch
 def media_path(self:Dialog, ref):
-    "Resolve a non-URL `#ai` media ref to a local path; hosts patch this to add their own roots and safety rules"
+    "Resolve a file reference to an absolute path. Hosts can override path and safety rules."
     p = Path(ref)
     if not p.is_absolute() and self.path_: p = Path(self.path_).parent/p
     return p.resolve()
 
 def _mk_media_tag(ref, msg, aim_info, max_im_sz=None):
-    "Media tag and bytes for a path, URL, or base64 `ref`; raster images resize via `Message.prep_img`"
+    "Prepare a media tag and data from a file, web URL, or data URL."
     kw = dict(prep=msg.prep_img, unavail_msg=msg.UNSUPPORTED_MSG)
     if ref.startswith('data:'):
         meta,data = ref.split(',', 1)
@@ -247,14 +247,14 @@ def warning_tag(warning: str): return System_reminder('**NB**: ' + warning) if w
 # %% ../nbs/03_hist.ipynb #601875c5
 @patch
 def prompt_txt(self:Message, last=False):
-    "History text for a prompt: the envelope (`last`, threaded by `dlg2hist`, is unused: the envelope is the same for every prompt)"
+    "Render the prompt envelope. `last` does not change the default rendering."
     tz = getattr(self.dlg, 'timezone', 'UTC') if self.dlg else 'UTC'
     instr,task = task_tags(self.content, self.id, getattr(self, 'time_run', None), tz)
     return to_xml(instr, do_escape=False) + '\n' + to_xml(task, do_escape=False)
 
 @patch
 def hist_xml(self:Message, last=False):
-    "History XML for this message (the concise `Message.to_xml` is dlgskill's converter; this rendering adds time and serves `to_parts`)"
+    "Render message XML for history, including time information."
     if self.msg_type == sprompt: return self.prompt_txt(last)
     it = item2xml('markdown' if self.msg_type==snote else self.msg_type, self.content, self.ai_output,
                   id=self.id, time=self.local_time() or None, meta=self.meta)
@@ -263,7 +263,7 @@ def hist_xml(self:Message, last=False):
 # %% ../nbs/03_hist.ipynb #e0542c55
 @patch
 def media_extra(self:Message, aim_info, max_im_sz=None):
-    "Extra media sources beyond attachments and outputs: `#ai`-tagged markdown links by default; hosts patch to add more"
+    "Collect media from `#ai` Markdown links. Hosts can override this to add sources."
     return _media_static(self, aim_info, max_im_sz)
 
 @patch
@@ -350,7 +350,7 @@ def chat2dlg(
     cls=Dialog, # Dialog class to create
     mx=2000, # Maximum characters per rendered tool input/output string; None disables truncation (see `hist2fmt`)
 ):
-    "A dialog for `msgs`: one prompt per user turn, replies rendered in the format `fmt2hist` parses"
+    "Convert canonical messages to a dialog with one prompt per user turn."
     dlg,turns = cls(name=name),[]
     for m in msgs:
         if m.role=='user': turns.append((m,[]))

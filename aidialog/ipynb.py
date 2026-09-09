@@ -22,7 +22,7 @@ def att2dict(att): return {att.content_type: b64encode(att.data).decode('ascii')
 
 # %% ../nbs/02_ipynb.ipynb #4687142c
 def home_atts(nb):
-    "Move code cells' attachments into the notebook-metadata home rustygate uses"
+    "Store code-cell attachments in notebook metadata using rustygate's convention"
     home = nb['metadata'].setdefault('attachments', {})
     for c in nb['cells']:
         if c['cell_type']=='code' and (atts := c.pop('attachments', None)): home[c['id']] = atts
@@ -30,7 +30,7 @@ def home_atts(nb):
     return nb
 
 def unhome_atts(nb):
-    "Reattach homed attachments onto their code cells: the inverse of `home_atts`"
+    "Restore notebook-metadata attachments to their cells"
     home = nb['metadata'].pop('attachments', {})
     for c in nb['cells']:
         if (atts := home.get(c['id'])): c['attachments'] = atts
@@ -48,7 +48,7 @@ def _clean_out_meta(o):
 # %% ../nbs/02_ipynb.ipynb #20f31fdc
 @patch
 def cell_meta(self:Message):
-    "Metadata dict to write: `meta` plus demoted `meta_attrs` fields, falsy values omitted"
+    "Build cell metadata from `meta` and declared attributes, omitting falsy attribute values"
     meta = dict(self.meta)
     for a,k in self.meta_attrs.items():
         if (v := getattr(self, a, None)): meta[k] = v
@@ -95,7 +95,9 @@ def safe_mtime(p):
 
 # %% ../nbs/02_ipynb.ipynb #ea5fa1dd
 def write_ipynb(dlg:Dialog, fname=None, version=2, msgs=None, **kwargs):
-    "Write `dlg` as a notebook, or return the JSON string if `fname` is None; `kwargs` (e.g. `uid`/`gid`) pass to `atomic_save`"
+    """Write `dlg` as a notebook, or return its JSON string if `fname` is None.
+
+    Pass `kwargs`, such as `uid` and `gid`, to `atomic_save`."""
     res = nb2str(get_ipynb(dlg, version=version, msgs=msgs))
     if not fname: return res
     fname = Path(fname).expanduser()
@@ -159,7 +161,9 @@ def reads_ipynb(txt, cls=Dialog, name='dialog', verbose=False):
 
 # %% ../nbs/02_ipynb.ipynb #7e8912e8
 def read_ipynb(fname, cls=Dialog, name=None, verbose=False):
-    "Read a dialog from notebook file `fname` (`.ipynb` added if missing), constructing via `cls`; `name` defaults to the file stem"
+    """Read notebook file `fname` into a dialog of type `cls`.
+
+    Set the filename's suffix to `.ipynb`. Default `name` to the file stem."""
     f = Path(fname).expanduser()
     if f.suffix != '.ipynb': f = f.with_suffix('.ipynb')
     if not f.exists(): return print(f,'does not exist')
@@ -181,7 +185,7 @@ def save(self:Dialog, fname=None):
 _reply_sep = "\n\n##### 🤖Reply🤖<!-- SOLVEIT_SEPARATOR_7f3a9b2c -->\n\n"
 
 def conv_old_prompts(nb):
-    "Rewrite old markdown-form prompt cells to the code-cell form, in place; returns the changed cell ids"
+    "Convert old markdown prompt cells to code cells in place and return their changed ids"
     changed = []
     for c in nb['cells']:
         if c['cell_type']!='markdown' or not c['metadata'].get('solveit_ai'): continue

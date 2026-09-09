@@ -249,7 +249,7 @@ def mk_message(self:Dialog,
     export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
     **kwargs, # Passed to `msg_cls`
 ):
-    "Make new message and insert it into notebook before/after specified cell, or start of list (idx=0) by default"
+    "Create and insert a message, appending by default"
     if msg_type==scode and isinstance(output,str): output = loads(output or '[]')
     msg = self.msg_cls(content, self, msg_type=msg_type, output=output, meta=meta, **kwargs)
     if export: msg.meta_exported = True

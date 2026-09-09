@@ -373,7 +373,7 @@ def _media_tag(p):
 def tool_text(
     res, # A tool function's return value
 ):
-    "Canonical string form of a tool result: `Part` lists render as text and `<media>` tags, dicts/lists as JSON, everything else via `str`"
+    "Convert a tool result to text, using compact media tags and JSON for structured values."
     if isinstance(res, str): return res
     if isinstance(res, list) and all(isinstance(o, Part) for o in res): return '\n'.join(o.ctext for o in res)
     if isinstance(res, (dict, list)): return dumps(res, ensure_ascii=False, default=str)
@@ -433,7 +433,7 @@ class MdStr(str): pass
 
 # %% ../nbs/00_msg_parts.ipynb #4f105e4d
 def trunc_str(s, mx=2000, skip=10, replace="TRUNCATED"):
-    "Truncate `s` to `mx` chars max, adding `replace` if truncated; `mx=None` disables truncation"
+    "Shorten ordinary display strings using `mx` and mark truncation with `replace`."
     if mx is None or isinstance_str(s, ('FullResponse','Safe','PrettyString')): return s
     if not isinstance(s, str): s = str(s)
     s = type(s)(s.rstrip())
@@ -494,7 +494,7 @@ def doc(self:Thinking, showthink=False, mx=2000):
 def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summary(self)} ⏳\n"
 @patch
 def doc(self:ToolUse, showthink=False, mx=2000):
-    "A server call renders as a completed block, its `text` (the provider's result, when it gave one) as the result; any other pending call is an ⏳ row"
+    "Render a completed server call or a pending client-call row."
     if not self.server: return self.formatted.strip()
     return mk_tr_details(self.replace(text=self.text or 'Server tool call executed.'), mx=mx).strip()
 
@@ -503,7 +503,7 @@ def doc(self:ToolUse, showthink=False, mx=2000):
 def formatted(self:ToolResult): return mk_tr_details(self)
 @patch
 def doc(self:ToolResult, showthink=False, mx=2000):
-    "A result with no id can't be re-parsed into history (e.g. Gemini code execution), so it doesn't render"
+    "Render an identified result as a tool block. Omit results without an ID."
     return mk_tr_details(self, mx=mx).strip() if self.id else ''
 
 # %% ../nbs/00_msg_parts.ipynb #29e2b39b
@@ -515,7 +515,7 @@ def ctext(self:Media): return _media_tag(self)
 
 # %% ../nbs/00_msg_parts.ipynb #e5acd16a
 def hist2fmt(msgs:list[Msg], mx=2000, showthink=False)->str:
-    "Render assistant/tool `msgs` as one formatted output string, the inverse of `fmt2hist`"
+    "Render assistant and tool messages as one editable Markdown reply."
     tus, out = {}, []
     for m in msgs:
         if m.role == 'assistant':
@@ -536,7 +536,7 @@ def mk_msg(
     content,      # Content: str, bytes (image), list of mixed content, or dict w 'role' and 'content' fields
     role="user"    # Message role if content isn't already a dict/Message
 ):
-    "Create a LiteLLM compatible message."
+    "Build a `Msg` from content, or unwrap an existing message or completion."
     if content is None: return None
     if isinstance(content, Msg): return content
     if isinstance(content, Completion): return content.message
