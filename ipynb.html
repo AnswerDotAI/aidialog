@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Reading and writing dialogs as Jupyter notebooks">
+
+<title>ipynb import and export – aidialog</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5ff355f32169432f12e3b54c979a24ba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="ipynb import and export – aidialog">
+<meta property="og:description" content="Reading and writing dialogs as Jupyter notebooks">
+<meta property="og:site_name" content="aidialog">
+<meta name="twitter:title" content="ipynb import and export – aidialog">
+<meta name="twitter:description" content="Reading and writing dialogs as Jupyter notebooks">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">aidialog</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ipynb.html">ipynb import and export</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">aidialog</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./msg_parts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">msg_parts</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./dialog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dialog</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ipynb.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">ipynb import and export</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./hist.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">hist</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./dlgskill.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dlgskill</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#writing" id="toc-writing" class="nav-link active" data-scroll-target="#writing">Writing</a></li>
+  <li><a href="#reading" id="toc-reading" class="nav-link" data-scroll-target="#reading">Reading</a>
+  <ul class="collapse">
+  <li><a href="#metadata-preservation" id="toc-metadata-preservation" class="nav-link" data-scroll-target="#metadata-preservation">Metadata preservation</a></li>
+  <li><a href="#round-trip-fidelity" id="toc-round-trip-fidelity" class="nav-link" data-scroll-target="#round-trip-fidelity">Round-trip fidelity</a></li>
+  </ul></li>
+  <li><a href="#converting-old-prompts" id="toc-converting-old-prompts" class="nav-link" data-scroll-target="#converting-old-prompts">Converting old prompts</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/aidialog/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="ipynb.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">ipynb import and export</h1>
+</div>
+
+<div>
+  <div class="description">
+    Reading and writing dialogs as Jupyter notebooks
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#write_ipynb"><code>write_ipynb</code></a> converts a <a href="https://AnswerDotAI.github.io/aidialog/dialog.html#dialog"><code>Dialog</code></a> to a Jupyter notebook file or a JSON string. <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb"><code>read_ipynb</code></a> and <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#reads_ipynb"><code>reads_ipynb</code></a> convert those forms back to dialogs. Other notebook tools can open the <code>.ipynb</code> files.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 40%">
+<col style="width: 32%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Message type</th>
+<th>Notebook cell type</th>
+<th>Representation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>note</code></td>
+<td>markdown</td>
+<td>Message content becomes cell source</td>
+</tr>
+<tr class="even">
+<td><code>prompt</code></td>
+<td>code</td>
+<td><code>solveit_ai</code> metadata, a <code>%%prompt</code> first line, and an <code>is_ai_res</code> output for the reply</td>
+</tr>
+<tr class="odd">
+<td><code>code</code></td>
+<td>code</td>
+<td>Source and standard notebook outputs</td>
+</tr>
+<tr class="even">
+<td><code>raw</code></td>
+<td>raw</td>
+<td>Message content becomes cell source</td>
+</tr>
+</tbody>
+</table>
+<div id="43c6f823" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.090555+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.174658+00:00&quot;,&quot;total&quot;:0.08410993200000405}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random,os,nbformat</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> nbformat.validator <span class="im">import</span> NotebookValidationError</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tempfile <span class="im">import</span> mkdtemp</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> <span class="op">*</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="01a04e7a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">7</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>tstdir <span class="op">=</span> Path(mkdtemp())</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>dlg <span class="op">=</span> Dialog(name<span class="op">=</span><span class="st">'dlg'</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>nt_msg <span class="op">=</span> dlg.mk_message(<span class="st">'A *test* dialog'</span>, msg_type<span class="op">=</span>snote)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>nt_msg.mk_attachment(<span class="st">b'not really a png'</span>, <span class="st">'image/png'</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>code_msg <span class="op">=</span> dlg.mk_message(<span class="st">'1+1'</span>, msg_type<span class="op">=</span>scode, output<span class="op">=</span>code_output(<span class="st">'2'</span>))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>ai_msg <span class="op">=</span> dlg.mk_message(<span class="st">'Add them.'</span>, msg_type<span class="op">=</span>sprompt, output<span class="op">=</span><span class="st">'The answer is **2**.'</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>raw_msg <span class="op">=</span> dlg.mk_message(<span class="st">'plain text'</span>, msg_type<span class="op">=</span>sraw)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>dlg</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<p><strong>dlg</strong></p>
+<details>
+<ul>
+<li>A <em>test</em> dialog</li>
+<li>1+1 ⇒ [{‘output_type’: ‘execute_result’, ‘metadata’: {}, ‘data’: …</li>
+<li>Add them. ⇒ [{‘output_type’: ‘display_data’, ‘metadata’: {‘is_ai_res’: …</li>
+<li>plain text</li>
+</ul>
+</details>
+</div>
+</div>
+<section id="writing" class="level2">
+<h2 class="anchored" data-anchor-id="writing">Writing</h2>
+<p>Each attachment has an id and a MIME type. Binary data uses base64 in the notebook:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"attachments"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"image.png"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"image/png"</span><span class="fu">:</span> <span class="st">"iVBO...kJggg=="</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="844f1264" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.176590+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.283206+00:00&quot;,&quot;total&quot;:0.1066214720000005}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L21" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="att2dict" class="level3">
+<h3 class="anchored" data-anchor-id="att2dict">att2dict</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> att2dict(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    att</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+<p>Every message type supports attachments, but nbformat permits cell attachments only on markdown and raw cells. For code cells, aidialog follows rustygate’s convention: store attachments in notebook metadata under <code>metadata.attachments[cell_id]</code>. Rustygate calls this location the attachment <em>home</em>.</p>
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#home_atts"><code>home_atts</code></a> moves code-cell attachments there before writing. <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#unhome_atts"><code>unhome_atts</code></a> restores them to their cells before reading. This matches rustygate’s files and the ordinary cell representation its API returns. In memory, use <code>Message.attachments</code> regardless of the message type.</p>
+<div id="2443f116" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.285633+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.289867+00:00&quot;,&quot;total&quot;:0.004237558999989233}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L32" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="unhome_atts" class="level3">
+<h3 class="anchored" data-anchor-id="unhome_atts">unhome_atts</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> unhome_atts(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    nb</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Restore notebook-metadata attachments to their cells</em></p>
+</section>
+</div>
+<div id="725d2a5d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.289992+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.293999+00:00&quot;,&quot;total&quot;:0.004011028000007855}}" data-execution_count="7">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L24" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="home_atts" class="level3">
+<h3 class="anchored" data-anchor-id="home_atts">home_atts</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> home_atts(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    nb</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Store code-cell attachments in notebook metadata using rustygate’s convention</em></p>
+</section>
+</div>
+<p>A prompt contains both a question and an AI reply. <code>to_cell</code> writes it as a code cell with <code>solveit_ai: true</code> in metadata. The source starts with <code>%%prompt</code>, followed by the question. The reply uses the <code>display_data</code> output from <a href="https://AnswerDotAI.github.io/aidialog/dialog.html#prompt_output"><code>prompt_output</code></a>, with <code>is_ai_res</code> in its metadata.</p>
+<p>Outside Solveit, a runner without the <code>%%prompt</code> magic raises <code>UsageError</code> rather than trying to execute the question as Python. A host can define that magic to run prompts. <code>cell2msg</code> removes the magic line when reconstructing the message.</p>
+<div id="d01dc466" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.296841+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.300686+00:00&quot;,&quot;total&quot;:0.003848122999997372}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L50" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="message.cell_meta" class="level3">
+<h3 class="anchored" data-anchor-id="message.cell_meta">Message.cell_meta</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cell_meta():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Build cell metadata from <code>meta</code> and declared attributes, omitting falsy attribute values</em></p>
+</section>
+</div>
+<p><code>to_cell</code> calls <code>cell_meta</code> to prepare the cell’s metadata. Override <code>cell_meta</code> when your host uses different types in memory and on disk. Call <code>super()</code> first, then convert the values it returns. For example, Solveit uses integer UI flags, but the notebook schema requires booleans for <code>collapsed</code> and <code>hide_input</code>.</p>
+<div id="0958ddc9" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.303569+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.308521+00:00&quot;,&quot;total&quot;:0.0049551970000010215}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L62" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="message.to_cell" class="level3">
+<h3 class="anchored" data-anchor-id="message.to_cell">Message.to_cell</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> to_cell(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    version:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Convert message to a notebook cell</em></p>
+</section>
+</div>
+<div id="16962172" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>om <span class="op">=</span> Message(<span class="st">'x'</span>, msg_type<span class="op">=</span><span class="st">'code'</span>, output<span class="op">=</span>[<span class="bu">dict</span>(output_type<span class="op">=</span><span class="st">'execute_result'</span>, data<span class="op">=</span>{<span class="st">'text/plain'</span>:<span class="st">'42'</span>}, metadata<span class="op">=</span>{<span class="st">'__type'</span>:<span class="st">'Safe'</span>}, execution_count<span class="op">=</span><span class="dv">1</span>)])</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>test_eq(om.to_cell()[<span class="st">'outputs'</span>][<span class="dv">0</span>][<span class="st">'metadata'</span>], {})  <span class="co"># transient metadata never reaches the file...</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>test_eq(om.output[<span class="dv">0</span>][<span class="st">'metadata'</span>], {<span class="st">'__type'</span>:<span class="st">'Safe'</span>})  <span class="co"># ...and serializing never mutates the live output (hosts read it after writes)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="2f2d54e6" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>test_eq(Message().to_cell()[<span class="st">'metadata'</span>],{})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>meta_attrs</code> maps attributes on a message to metadata keys in its notebook cell. <code>cell_meta</code> writes those attributes to their declared keys. It omits falsy attribute values. <code>cell2msg</code> restores the attributes when reading.</p>
+<p>The <a href="https://AnswerDotAI.github.io/aidialog/dialog.html#message"><code>Message</code></a> constructor also extracts declared attributes from <code>meta=</code>. An attribute’s default cannot hide a value supplied in that metadata. Keys outside <code>meta_attrs</code> remain in <code>Message.meta</code> and round-trip unchanged.</p>
+<p>Here a host adds a <code>bookmark</code> attribute to its message class.</p>
+<div id="146ce440" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> NoteMsg(Message): meta_attrs <span class="op">=</span> <span class="bu">dict</span>(bookmark<span class="op">=</span><span class="st">'bookmark'</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> NoteDlg(Dialog): msg_cls <span class="op">=</span> NoteMsg</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>bookmark_cell <span class="op">=</span> NoteMsg(bookmark<span class="op">=</span><span class="dv">9</span>).to_cell()</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>test_eq(bookmark_cell[<span class="st">'metadata'</span>][<span class="st">'bookmark'</span>], <span class="dv">9</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>test_eq(NoteMsg().to_cell()[<span class="st">'metadata'</span>], {})  <span class="co"># default/absent values aren't written</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="77465fe2" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>test_eq(NoteMsg(<span class="st">'x'</span>, meta<span class="op">=</span><span class="bu">dict</span>(bookmark<span class="op">=</span><span class="dv">7</span>)).bookmark, <span class="dv">7</span>)  <span class="co"># constructor meta promotes like a file read</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>test_eq(NoteMsg(<span class="st">'x'</span>, meta<span class="op">=</span><span class="bu">dict</span>(bookmark<span class="op">=</span><span class="dv">7</span>)).to_cell()[<span class="st">'metadata'</span>], {<span class="st">'bookmark'</span>: <span class="dv">7</span>})  <span class="co"># ...so it round-trips to the file</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This host accepts an integer <code>collapsed</code> flag in memory and writes it as a boolean. Its <code>cell_meta</code> override handles the conversion.</p>
+<div id="82b86ee5" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FlagMsg(Message):</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    meta_attrs <span class="op">=</span> <span class="bu">dict</span>(collapsed<span class="op">=</span><span class="st">'collapsed'</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> cell_meta(<span class="va">self</span>): <span class="cf">return</span> {k: <span class="bu">bool</span>(v) <span class="cf">for</span> k,v <span class="kw">in</span> <span class="bu">super</span>().cell_meta().items()}</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> FlagMsg(collapsed<span class="op">=</span><span class="dv">1</span>).to_cell()[<span class="st">'metadata'</span>][<span class="st">'collapsed'</span>] <span class="kw">is</span> <span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="ccd79477" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pr_msg <span class="op">=</span> dlg.mk_message(<span class="st">'What is 2+2?'</span>, output<span class="op">=</span><span class="st">'The answer is 4.'</span>, msg_type<span class="op">=</span><span class="st">'prompt'</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>pr_cell <span class="op">=</span> pr_msg.to_cell()</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>test_eq((pr_cell[<span class="st">'cell_type'</span>], pr_cell[<span class="st">'metadata'</span>][<span class="st">'solveit_ai'</span>]), (<span class="st">'code'</span>, <span class="va">True</span>))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>test_eq(pr_cell[<span class="st">'source'</span>], <span class="st">'</span><span class="sc">%%</span><span class="st">prompt</span><span class="ch">\n</span><span class="st">What is 2+2?'</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>test_eq(pr_cell[<span class="st">'outputs'</span>], prompt_output(<span class="st">'The answer is 4.'</span>))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>pr_empty <span class="op">=</span> dlg.mk_message(<span class="st">'Hello?'</span>, output<span class="op">=</span><span class="st">''</span>, msg_type<span class="op">=</span><span class="st">'prompt'</span>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>test_eq(pr_empty.to_cell()[<span class="st">'outputs'</span>], [])</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>pr_cell</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>{ <span class="st">'cell_type'</span>: <span class="st">'code'</span>,</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">'directives_'</span>: {},</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'execution_count'</span>: <span class="va">None</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">'id'</span>: <span class="st">'fad71427'</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'idx_'</span>: <span class="dv">0</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'lang_'</span>: <span class="st">'python'</span>,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'metadata'</span>: {<span class="st">'solveit_ai'</span>: <span class="va">True</span>},</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">'outputs'</span>: [ { <span class="st">'data'</span>: {<span class="st">'text/markdown'</span>: <span class="st">'The answer is 4.'</span>},</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'metadata'</span>: {<span class="st">'is_ai_res'</span>: <span class="va">True</span>},</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'output_type'</span>: <span class="st">'display_data'</span>}],</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">'source'</span>: <span class="st">'</span><span class="sc">%%</span><span class="st">prompt</span><span class="ch">\n</span><span class="st">What is 2+2?'</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+<div id="8b85e82e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.311884+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.316023+00:00&quot;,&quot;total&quot;:0.004142435000005662}}" data-execution_count="14">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L81" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="get_ipynb" class="level3">
+<h3 class="anchored" data-anchor-id="get_ipynb">get_ipynb</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_ipynb(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    dlg:aidialog.dialog.Dialog, version:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, msgs:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Notebook object for <code>dlg</code>; <code>msgs</code> defaults to all its messages</em></p>
+</section>
+</div>
+<div id="2a61399f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.317294+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.320882+00:00&quot;,&quot;total&quot;:0.0035920480000015687}}" data-execution_count="16">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L91" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="safe_mtime" class="level3">
+<h3 class="anchored" data-anchor-id="safe_mtime">safe_mtime</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> safe_mtime(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    p</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>mtime of <code>p</code>, its symlink if the target is missing, or None if <code>p</code> vanished (e.g.&nbsp;an atomic-save temp file)</em></p>
+</section>
+</div>
+<div id="0272dc06" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.322598+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.326844+00:00&quot;,&quot;total&quot;:0.0042489549999942255}}" data-execution_count="18">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L97" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="write_ipynb" class="level3">
+<h3 class="anchored" data-anchor-id="write_ipynb">write_ipynb</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> write_ipynb(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    dlg:aidialog.dialog.Dialog, fname:NoneType<span class="op">=</span><span class="va">None</span>, version:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, msgs:NoneType<span class="op">=</span><span class="va">None</span>, <span class="op">**</span>kwargs</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Write <code>dlg</code> as a notebook, or return its JSON string if <code>fname</code> is None.</em></p>
+<p>Pass <code>kwargs</code>, such as <code>uid</code> and <code>gid</code>, to <code>atomic_save</code>.</p>
+</section>
+</div>
+<div id="45350c3c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>write_ipynb(dlg, fname<span class="op">=</span>tstdir<span class="op">/</span><span class="st">'dlg.ipynb'</span>, version<span class="op">=</span><span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="da4c6aad" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.328238+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.332087+00:00&quot;,&quot;total&quot;:0.0038520590000103994}}" data-execution_count="20">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L109" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dialog.write" class="level3">
+<h3 class="anchored" data-anchor-id="dialog.write">Dialog.write</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> write(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    base_path, version:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, msgs:NoneType<span class="op">=</span><span class="va">None</span>, <span class="op">**</span>kwargs</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+<div id="4eca35e0" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>dlg.write(tstdir)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="6227b051" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.333871+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.338043+00:00&quot;,&quot;total&quot;:0.004175794999994764}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L113" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="ipynb_cells" class="level3">
+<h3 class="anchored" data-anchor-id="ipynb_cells">ipynb_cells</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ipynb_cells(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    path, nm, prefix:NoneType<span class="op">=</span><span class="va">None</span>, suffix:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+<div id="57260186" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">len</span>(ipynb_cells(tstdir, dlg.name)), <span class="bu">len</span>(dlg.messages))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>ipynb_cells(tstdir, dlg.name)[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>{ <span class="st">'attachments'</span>: { <span class="st">'2530bb1d-6d13-4cde-8623-7b2ed91e3f72'</span>: { <span class="st">'image/png'</span>: <span class="st">'bm90IHJlYWxseSBhIHBuZw=='</span>}},</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">'cell_type'</span>: <span class="st">'markdown'</span>,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'id'</span>: <span class="st">'a54dca18'</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">'idx_'</span>: <span class="dv">0</span>,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'lang_'</span>: <span class="st">'python'</span>,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'metadata'</span>: {},</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'source'</span>: <span class="st">'A *test* dialog'</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</section>
+<section id="reading" class="level2">
+<h2 class="anchored" data-anchor-id="reading">Reading</h2>
+<div id="c5c3dcff" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.339828+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.343597+00:00&quot;,&quot;total&quot;:0.0037721779999912997}}" data-execution_count="24">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L122" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dict2att" class="level3">
+<h3 class="anchored" data-anchor-id="dict2att">dict2att</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dict2att(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    att_id, att_data</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Convert attachment dict to Attachment object</em></p>
+</section>
+</div>
+<div id="c25a7e8a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.347038+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.352277+00:00&quot;,&quot;total&quot;:0.005243086000007224}}" data-execution_count="26">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L134" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dialog.cell2msg" class="level3">
+<h3 class="anchored" data-anchor-id="dialog.cell2msg">Dialog.cell2msg</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cell2msg(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    cell</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Convert single notebook cell to message object</em></p>
+</section>
+</div>
+<div id="fd71355f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> NoteDlg(name<span class="op">=</span><span class="st">'t'</span>).cell2msg(bookmark_cell)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>test_eq(back.bookmark, <span class="dv">9</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>test_eq(back.meta, {})  <span class="co"># promoted out of `meta` into the attribute</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="fe9c26c1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test roundtrip prompts</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>pr_back <span class="op">=</span> dlg.cell2msg(pr_cell)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>test_eq(pr_back.content, <span class="st">'What is 2+2?'</span>)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>test_eq(pr_back.msg_type, <span class="st">'prompt'</span>)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>test_eq(pr_back.ai_res, <span class="st">'The answer is 4.'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="524f1af4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.353876+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.357511+00:00&quot;,&quot;total&quot;:0.0036391370000075085}}" data-execution_count="28">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L149" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dialog.from_cells" class="level3">
+<h3 class="anchored" data-anchor-id="dialog.from_cells">Dialog.from_cells</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> from_cells(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    cells</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
+<div id="513fdaec" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.359152+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.363341+00:00&quot;,&quot;total&quot;:0.004192557000010311}}" data-execution_count="30">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L154" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="reads_ipynb" class="level3">
+<h3 class="anchored" data-anchor-id="reads_ipynb">reads_ipynb</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> reads_ipynb(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    txt, cls:<span class="bu">type</span><span class="op">=</span>Dialog, name:<span class="bu">str</span><span class="op">=</span><span class="st">'dialog'</span>, verbose:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Read a dialog from notebook JSON string <code>txt</code>, constructing via <code>cls</code></em></p>
+</section>
+</div>
+<div id="3951fef1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.365215+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.369655+00:00&quot;,&quot;total&quot;:0.004444065000001274}}" data-execution_count="32">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L163" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="read_ipynb" class="level3">
+<h3 class="anchored" data-anchor-id="read_ipynb">read_ipynb</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_ipynb(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    fname, cls:<span class="bu">type</span><span class="op">=</span>Dialog, name:NoneType<span class="op">=</span><span class="va">None</span>, verbose:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Read notebook file <code>fname</code> into a dialog of type <code>cls</code>.</em></p>
+<p>Set the filename’s suffix to <code>.ipynb</code>. Default <code>name</code> to the file stem.</p>
+</section>
+</div>
+<div id="1cc12bb2" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>dlg <span class="op">=</span> read_ipynb(tstdir<span class="op">/</span><span class="st">'dlg'</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>dlg</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<p><strong>dlg</strong></p>
+<details>
+<ul>
+<li>A <em>test</em> dialog</li>
+<li>1+1 ⇒ [{‘data’: {‘text/plain’: ‘2’}, ‘execution_count’: 1, ’metad…</li>
+<li>Add them. ⇒ [{‘data’: {‘text/markdown’: ‘The answer is <strong>2</strong>.’}, ’metad…</li>
+<li>plain text</li>
+<li>What is 2+2? ⇒ [{‘data’: {‘text/markdown’: ‘The answer is 4.’}, ‘metadata’…</li>
+<li>Hello?</li>
+</ul>
+</details>
+</div>
+</div>
+<div id="5dfd922f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> (tstdir<span class="op">/</span><span class="st">'dlg.ipynb'</span>).read_text()</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>dlg2 <span class="op">=</span> reads_ipynb(s)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>test_eq(dlg2.name, <span class="st">'dialog'</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>test_eq(write_ipynb(dlg2), s)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(json.JSONDecodeError): reads_ipynb(<span class="st">'not json'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This example writes a code message with an image attachment. The file passes nbformat validation because the attachment uses <code>metadata.attachments</code>, keyed by cell id. Reading restores the attachment’s original bytes to the message. Writing the reconstructed dialog produces the same JSON.</p>
+<div id="85164aca" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>hm <span class="op">=</span> Dialog(name<span class="op">=</span><span class="st">'home'</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>cm <span class="op">=</span> hm.mk_message(<span class="st">'1+1'</span>, msg_type<span class="op">=</span>scode, output<span class="op">=</span>code_output(<span class="st">'2'</span>))</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>cm.mk_attachment(<span class="st">b'not really a png'</span>, <span class="st">'image/png'</span>)</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>hs <span class="op">=</span> write_ipynb(hm)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>nbformat.validate(nbformat.reads(hs, as_version<span class="op">=</span><span class="dv">4</span>))</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>hnb <span class="op">=</span> json.loads(hs)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'attachments'</span> <span class="kw">not</span> <span class="kw">in</span> hnb[<span class="st">'cells'</span>][<span class="dv">0</span>]</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>test_eq(reads_ipynb(hs).messages[<span class="dv">0</span>].attachments[<span class="dv">0</span>].data, <span class="st">b'not really a png'</span>)</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>test_eq(write_ipynb(reads_ipynb(hs)), hs)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>hnb[<span class="st">'metadata'</span>][<span class="st">'attachments'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'e9232f8a': {'f2211f9e-e491-45b1-abec-b5563bfc1e6f': {'image/png': 'bm90IHJlYWxseSBhIHBuZw=='}}}</code></pre>
+</div>
+</div>
+<div id="a520c8cd" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.371855+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.375547+00:00&quot;,&quot;total&quot;:0.00369522100000097}}" data-execution_count="34">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L178" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dialog.save" class="level3">
+<h3 class="anchored" data-anchor-id="dialog.save">Dialog.save</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save(</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>    fname:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Write back to <code>fname</code>, or to the <code>path_</code> stamped by <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb"><code>read_ipynb</code></a></em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb"><code>read_ipynb</code></a> records the source file in <code>dlg.path_</code>. You can edit the dialog and call <code>save()</code> without passing the path again. The trailing underscore distinguishes this working attribute from a host’s own <code>path</code> property.</p>
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb"><code>read_ipynb</code></a> and file writes through <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#write_ipynb"><code>write_ipynb</code></a> record the file’s <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#safe_mtime"><code>safe_mtime</code></a> in <code>dlg.mtime_</code>. A host can compare that timestamp with the current file timestamp when checking for external writes. A new dialog has <code>None</code> for both attributes. <code>save()</code> needs an explicit filename until the dialog has a <code>path_</code>.</p>
+<p>The file below already uses aidialog’s normalized format. Saving it without edits preserves its bytes, although the save still updates the file’s timestamp.</p>
+<div id="f5931765" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>before <span class="op">=</span> (tstdir<span class="op">/</span><span class="st">'dlg.ipynb'</span>).read_text()</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>dlg.save()</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>test_eq((tstdir<span class="op">/</span><span class="st">'dlg.ipynb'</span>).read_text(), before)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>test_eq(dlg.mtime_, dlg.path_.stat().st_mtime)</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(dlg.messages, Msgs)</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>unread <span class="op">=</span> Dialog(name<span class="op">=</span><span class="st">'unread'</span>)</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>test_eq((unread.path_, unread.mtime_), (<span class="va">None</span>,<span class="va">None</span>))</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">ValueError</span>, <span class="st">'path_'</span>): unread.save()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="metadata-preservation" class="level3">
+<h3 class="anchored" data-anchor-id="metadata-preservation">Metadata preservation</h3>
+<p>The base <a href="https://AnswerDotAI.github.io/aidialog/dialog.html#message"><code>Message</code></a> class declares two metadata attributes. <code>skipped</code> hides a message from AI context. <code>pinned</code> keeps it through context eviction. Both use Solveit’s literal metadata keys for compatibility between hosts.</p>
+<p>Other application metadata remains in <code>Message.meta</code> unless a subclass declares it in <code>meta_attrs</code>. Notebook-level application metadata remains in <code>Dialog.meta</code>. The plain classes preserve those annotations when reading and writing files from another host.</p>
+<div id="c6d6dff1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>m0 <span class="op">=</span> dlg.messages[<span class="dv">0</span>]</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>m0.meta[<span class="st">'my_app_flag'</span>] <span class="op">=</span> <span class="bu">dict</span>(level<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>dlg.meta[<span class="st">'my_app'</span>] <span class="op">=</span> <span class="bu">dict</span>(version<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>dlg.write(tstdir)</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>dlg <span class="op">=</span> read_ipynb(tstdir<span class="op">/</span><span class="st">'dlg'</span>)</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>test_eq(dlg.messages[<span class="dv">0</span>].meta[<span class="st">'my_app_flag'</span>], <span class="bu">dict</span>(level<span class="op">=</span><span class="dv">3</span>))</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>test_eq(dlg.meta[<span class="st">'my_app'</span>], <span class="bu">dict</span>(version<span class="op">=</span><span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Set <code>skipped</code> and <code>pinned</code> as message attributes. Saving writes truthy values to their metadata keys. Reading restores them as attributes and removes those keys from <code>Message.meta</code>. Unset or falsy attributes add no metadata to the file.</p>
+<div id="f2dfeb82" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>m0 <span class="op">=</span> dlg.messages[<span class="dv">0</span>]</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>m0.skipped <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>m0.pinned <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>dlg.write(tstdir)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>rt <span class="op">=</span> read_ipynb(tstdir<span class="op">/</span><span class="st">'dlg'</span>)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>test_eq(rt.messages[<span class="dv">0</span>].skipped, <span class="dv">1</span>)                  <span class="co"># promoted back as a real attribute</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>test_eq(rt.messages[<span class="dv">0</span>].pinned, <span class="va">True</span>)</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'skipped'</span> <span class="kw">not</span> <span class="kw">in</span> rt.messages[<span class="dv">0</span>].meta         <span class="co"># claimed by meta_attrs, so not left in meta</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>test_eq(rt.messages[<span class="dv">1</span>].skipped, <span class="dv">0</span>)                  <span class="co"># untouched message: class default, and</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'skipped'</span> <span class="kw">not</span> <span class="kw">in</span> rt.messages[<span class="dv">1</span>].cell_meta()  <span class="co"># ...falsy means nothing written to the file</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="round-trip-fidelity" class="level3">
+<h3 class="anchored" data-anchor-id="round-trip-fidelity">Round-trip fidelity</h3>
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#write_ipynb"><code>write_ipynb</code></a> normalizes notebooks. For example, it writes <code>null</code> for each code cell’s execution count, even if that cell has run. The first save can therefore change the input file without changing its source or displayed output.</p>
+<p>After normalization, reading and writing an unedited dialog produces identical JSON with this serializer. Changes in that JSON indicate changes to the serialized dialog. Other notebook tools can still change formatting or serialization without changing the message content.</p>
+<p>We check this property against the repository’s notebooks as well as the constructed examples.</p>
+<div id="dd574666" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> p <span class="kw">in</span> <span class="bu">sorted</span>(Path(<span class="st">'.'</span>).glob(<span class="st">'0*.ipynb'</span>)):</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> write_ipynb(read_ipynb(<span class="bu">str</span>(p)))</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    test_eq(write_ipynb(reads_ipynb(s)), s)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Hand-edited notebooks can contain fields that nbformat rejects. This example reproduces a real file’s stray <code>outputs</code> key on a markdown cell. <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#read_ipynb"><code>read_ipynb</code></a> calls <code>repair_nb</code> before constructing messages. The repaired notebook keeps the source text and omits the invalid key. Writing it produces a file that passes validation.</p>
+<div id="10e06e64" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>bad_cells <span class="op">=</span> [<span class="bu">dict</span>(cell_type<span class="op">=</span><span class="st">'markdown'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'aaaa1111'</span>, metadata<span class="op">=</span>{}, source<span class="op">=</span><span class="st">'hi'</span>, outputs<span class="op">=</span>[])]</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>(tstdir<span class="op">/</span><span class="st">'bad.ipynb'</span>).write_text(json.dumps(<span class="bu">dict</span>(nbformat<span class="op">=</span><span class="dv">4</span>, nbformat_minor<span class="op">=</span><span class="dv">5</span>, metadata<span class="op">=</span>{}, cells<span class="op">=</span>bad_cells)))</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(NotebookValidationError): nbformat.validate(nbformat.read(tstdir<span class="op">/</span><span class="st">'bad.ipynb'</span>, as_version<span class="op">=</span><span class="dv">4</span>))</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>healed <span class="op">=</span> write_ipynb(read_ipynb(tstdir<span class="op">/</span><span class="st">'bad'</span>))</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>nbformat.validate(nbformat.reads(healed, as_version<span class="op">=</span><span class="dv">4</span>))</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'hi'</span> <span class="kw">in</span> healed</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="converting-old-prompts" class="level2">
+<h2 class="anchored" data-anchor-id="converting-old-prompts">Converting old prompts</h2>
+<p><a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#conv_old_prompts"><code>conv_old_prompts</code></a> converts old markdown prompt cells to the current code-cell format. It changes the supplied notebook object in place and returns the changed cell ids. A host can use that list to decide whether to write the file back after opening it.</p>
+<p>A second call leaves the converted cells unchanged and returns an empty list. After converting any prompts, <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#conv_old_prompts"><code>conv_old_prompts</code></a> calls <a href="https://AnswerDotAI.github.io/aidialog/ipynb.html#home_atts"><code>home_atts</code></a> to move their attachments into notebook metadata. Code cells cannot store those attachments directly.</p>
+<div id="ab55c6a7" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-11T02:30:11.379986+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-11T02:30:11.384557+00:00&quot;,&quot;total&quot;:0.004574060999999574}}" data-execution_count="36">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/aidialog/blob/main/aidialog/ipynb.py#L187" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="conv_old_prompts" class="level3">
+<h3 class="anchored" data-anchor-id="conv_old_prompts">conv_old_prompts</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> conv_old_prompts(</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    nb</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Convert old markdown prompt cells to code cells in place and return their changed ids</em></p>
+</section>
+</div>
+<p>Old prompt cells use markdown with <code>solveit_ai</code> metadata. Their source contains the question and reply separated by <code>_reply_sep</code>. Current writers use code cells instead.</p>
+<p>The example builds an old prompt using that separator. Conversion preserves its question, reply, and attachment. The new notebook passes schema validation and reconstructs the same message when read.</p>
+<div id="8a828666" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>onb <span class="op">=</span> <span class="bu">dict</span>(nbformat<span class="op">=</span><span class="dv">4</span>, nbformat_minor<span class="op">=</span><span class="dv">5</span>, metadata<span class="op">=</span>{}, cells<span class="op">=</span>[<span class="bu">dict</span>(</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    cell_type<span class="op">=</span><span class="st">'markdown'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'opr1'</span>, metadata<span class="op">=</span><span class="bu">dict</span>(solveit_ai<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    source<span class="op">=</span><span class="st">'What is 7*6?'</span> <span class="op">+</span> _reply_sep <span class="op">+</span> <span class="st">'**42**.'</span>,</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    attachments<span class="op">=</span>{<span class="st">'att1'</span>: {<span class="st">'image/png'</span>: <span class="st">'bm90IHJlYWxseSBhIHBuZw=='</span>}})])</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>test_eq(conv_old_prompts(onb), [<span class="st">'opr1'</span>])</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>ocell <span class="op">=</span> onb[<span class="st">'cells'</span>][<span class="dv">0</span>]</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>test_eq((ocell[<span class="st">'cell_type'</span>], ocell[<span class="st">'source'</span>]), (<span class="st">'code'</span>, <span class="st">'</span><span class="sc">%%</span><span class="st">prompt</span><span class="ch">\n</span><span class="st">What is 7*6?'</span>))</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'attachments'</span> <span class="kw">not</span> <span class="kw">in</span> ocell                <span class="co"># the retype homed the attachment</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>nbformat.validate(nbformat.from_dict(onb))</span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>test_eq(conv_old_prompts(onb), [])               <span class="co"># converted cells no longer match: idempotent</span></span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> reads_ipynb(json.dumps(onb)).messages[<span class="dv">0</span>]</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>test_eq((back.content, back.ai_res), (<span class="st">'What is 7*6?'</span>, <span class="st">'**42**.'</span>))</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>test_eq(back.attachments[<span class="dv">0</span>].data, <span class="st">b'not really a png'</span>)</span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>back.ai_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'**42**.'</code></pre>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/aidialog");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/aidialog/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
