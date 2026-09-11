@@ -1,6 +1,6 @@
 """Read, search, and edit notebook and dialog content through aidialog's `Dialog` and `Message` APIs. Use for cell sources, stored outputs, prompt/reply pairs, and structural message operations.
 
-**Workflow.** Start with `summary_dlg`, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Before editing, read `nbdev.skill` and `exhash.skill`; for cross-notebook searches, read `rgapi.skill` (`nbrg`).
+**Workflow.** Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Before editing, read `nbdev.skill` and `exhash.skill`; for cross-notebook searches, read `rgapi.skill` (`nbrg`).
 
 Use message operations for dialogs and `fastcore.nbio.Notebook`/`NbCell` operations for plain notebooks. Diagnose with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files. Propose missing structural operations; never splice notebook JSON.
 
