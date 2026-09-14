@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.32
+
+### New Features
+
+- Allow messages to be converted, exported, split, and resolve media without a dialog; add msgs2py and msgs2ipynb helpers ([#59](https://github.com/AnswerDotAI/aidialog/issues/59))
+
+
 ## 0.0.31
 
 ### New Features
