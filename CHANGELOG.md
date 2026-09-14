@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.33
+
+### New Features
+
+- Drop the full text size from truncated previews, keeping only the trailing missing-character count ([#60](https://github.com/AnswerDotAI/aidialog/issues/60))
+
+
 ## 0.0.32
 
 ### New Features
