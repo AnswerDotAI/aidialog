@@ -171,6 +171,10 @@ def media_path(self:Dialog, ref):
     if not p.is_absolute() and self.path_: p = Path(self.path_).parent/p
     return p.resolve()
 
+@patch
+def media_path(self:Message, ref):
+    "Resolve this message's file reference using its dialog, or the working directory."
+    return self.dlg.media_path(ref) if self.dlg else Path(ref).resolve()
 def _mk_media_tag(ref, msg, aim_info, max_im_sz=None):
     "Prepare a media tag and data from a file, web URL, or data URL."
     kw = dict(prep=msg.prep_img, unavail_msg=msg.UNSUPPORTED_MSG)
@@ -178,7 +182,7 @@ def _mk_media_tag(ref, msg, aim_info, max_im_sz=None):
         meta,data = ref.split(',', 1)
         mime = meta.removeprefix('data:').split(';')[0]
         return media_item('content', data[:10], lambda: base64.b64decode(data), aim_info, mime, max_im_sz, **kw)
-    data = lambda: MediaUrl(ref) if ref.startswith(('http://', 'https://')) else (msg.dlg.media_path(ref) if msg.dlg else Path(ref).resolve()).read_bytes()
+    data = lambda: MediaUrl(ref) if ref.startswith(('http://', 'https://')) else msg.media_path(ref).read_bytes()
     return media_item('content', ref, data, aim_info, max_im_sz=max_im_sz, **kw)
 
 _static_pat = re.compile(r'!\[[^\]]*\]\(([^)#]+)#ai\)')

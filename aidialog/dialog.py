@@ -9,9 +9,9 @@ __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'MAXLEN', 'AI_REND
            'Msgs', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
            'prompt_output', 'Message', 'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds',
            'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval',
-           'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'dlg2py', 'copy_export', 'merge_metas',
-           'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2xml', 'RunResult', 'msg2md',
-           'dlg2md', 'export_filter']
+           'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py', 'dlg2py', 'copy_export',
+           'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2xml',
+           'RunResult', 'msg2md', 'dlg2md', 'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
 import asyncio, base64, copy, random, re
@@ -523,9 +523,13 @@ def _set_mexp(self, v):
 Message.meta_exported = property(_get_mexp, _set_mexp,
     doc="The meta `nbdev` export entry alone - the host-owned switch; assigning writes or clears only meta, never content")
 
+def msgs2py(msgs):
+    "The exported code messages, as a python source string"
+    return '\n\n'.join(m.content for m in msgs if m.msg_type==scode and m.exported)
+
 def dlg2py(dlg):
     "The exported code of `dlg`, as a python source string"
-    return '\n\n'.join(m.content for m in dlg.messages if m.msg_type==scode and m.exported)
+    return msgs2py(dlg.messages)
 
 # %% ../nbs/01_dialog.ipynb #d905dc3f
 @patch

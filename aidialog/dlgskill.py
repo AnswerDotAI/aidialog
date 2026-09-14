@@ -262,8 +262,6 @@ def split(self:Message,
     *linenos:int, # Split before each of these 1-based lines
 ):
     "Split this message into pieces (returned as `Msgs`; the first keeps its id): one `'\\n\\n'` is absorbed at each cut (so `merge_msgs` restores blank-line-separated content byte-exactly), `meta_attrs` fields, the cell `meta`, and a leading `#| export` copy to every piece, attachments follow their references, and unreferenced ones stay on the first piece"
-    d = self.dlg
-    if d is None: raise ValueError('message is not in a dialog')
     lines = self.content.splitlines()
     cuts = [0, *[l-1 for l in linenos], len(lines)]
     parts = ['\n'.join(lines[a:b]) for a,b in zip(cuts, cuts[1:])]
@@ -277,11 +275,12 @@ def split(self:Message,
     used = {a.id for r in refs for a in r}
     refs[0] += [a for a in self.attachments if a.id not in used]
     self.content, self.attachments = parts[0], refs[0]
-    prev, res = self, [self]
+    res = [self]
     for p,r in zip(parts[1:], refs[1:]):
         p = copy_export(p, src)
-        prev = d.mk_message(p, after=prev, msg_type=self.msg_type, attachments=r, meta=copy.deepcopy(self.meta), **keep)
-        res.append(prev)
+        m = type(self)(p, msg_type=self.msg_type, attachments=r, meta=copy.deepcopy(self.meta), **keep)
+        res.append(m)
+    if self.dlg is not None: self.insert_after(res[1:])
     return Msgs(res)
 
 def split_msg(
