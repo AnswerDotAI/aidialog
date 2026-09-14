@@ -93,4 +93,6 @@ aidialog-del nbs/00_core.ipynb ab12cd34
 aidialog-move nbs/00_core.ipynb ab12cd34,ef56ab78 --before 9012cdef
 ```
 
+`aidialog-summary` and [`summary_dlg`](https://AnswerDotAI.github.io/aidialog/dlgskill.html#summary_dlg) show one preview per message. Truncated previews end with `…[N]`, where `N` is the number of omitted characters.
+
 Message ID arguments are comma-separated where a command accepts several. Mutating commands accept `--dry-run`; run any command with `--help` for its full filters and display options.

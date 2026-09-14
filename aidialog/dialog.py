@@ -212,7 +212,7 @@ def preview(self:Message,
     maxlen:int=MAXLEN, # Maximum characters per line
     sep:str=':', # Separator before the content; a find shows `-` on context rows
 ):
-    "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead. A cut row carries its size before the separator and ends with the count of characters missing"
+    "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead. A cut row ends with the count of characters missing"
     txt = self.content or (f"<{self.meta['rec_kind']}>" if self.meta.get('rec_kind') else '')
     res = prev_line(txt, maxlen, f"{self.id}:{self.msg_type[0]}{dir_tag(self.meta)}", sep)
     if self.msg_type==sprompt and self.ai_res: return res + '\n' + prev_line(self.ai_res, maxlen, '>', ' ')
