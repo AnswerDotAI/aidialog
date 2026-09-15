@@ -12,11 +12,11 @@ Call documented APIs without speculative fallbacks. Display results bare, never 
 
 **Views and identity.** Summaries use `id:t[directives]:content`: c=code, n=note, p=prompt, r=raw. Replies follow `>`; truncations end with a bracketed missing-character count. Directives are nbdev metadata, as in nbio summaries. XML uses `item2xml`, `<out>` replies, and directive attributes such as bare `export`.
 
-File searches return `MsgRows`/`MsgRow` snapshots (`id`, `msg_type`, `content`, `out`, `meta`); method searches return live `FoundMsgs`. Index by exact id or unique prefix, never position. Context rows use `-` instead of the first `:`. Default context is one neighbor each side, including with `ids=`; `headers_only` defaults to zero.
+File searches and method searches both return live `FoundMsgs`. A file search reads a fresh `Dialog`. Its messages are not the ones a held `Dialog` holds. An edit to them reaches disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows use `-` instead of the first `:`. Default context is one neighbor each side, including with `ids=`; `headers_only` defaults to zero.
 
 **Placement and metadata.** The host calls `set_cur_msg`; writes never move it. Unanchored adds follow it, or append if unset/missing. Chain explicit `after=` anchors for successive additions.
 
-`m.exported` and `only_exp` include source and metadata directives; assignable `m.meta_exported` uses metadata only. `Message.update`/`update_msg` replace attributes, including whole `meta`; `mergemeta` deep-merges, with `None` deleting keys. `export=True` adds and `False` removes, migrating source export to metadata without a negative directive. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
+`m.exported` and `only_exp` include source and metadata directives. `only_exp` and `only_err` take `True`, `False`, or `None` for all. Assignable `m.meta_exported` uses metadata only. `Message.update`/`update_msg` replace attributes, including whole `meta`; `mergemeta` deep-merges, with `None` deleting keys. `export=True` adds and `False` removes, migrating source export to metadata without a negative directive. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
 
 **Kernel execution.** `%nbrun` runs in the current kernel. `Dialog.execute`/`Message.execute` capture outputs on held messages and return `RunResult` (abbreviated successes, exceptions on failure). They block; use `asyncio.to_thread` in async hosts. Read `Dialog.execute` for selection, shell lifetime, and saving.
 
@@ -170,8 +170,8 @@ def _match_head(m, want):
 def find_msgs(self:Dialog,
     re_pattern:str='', # Regex over content (a prompt's reply included), DOTALL+MULTILINE; an invalid regex matches literally
     msg_type:str=None, # Optional limit by type ('code', 'note', 'prompt', or 'raw')
-    only_err:bool=False, # Only code messages with error outputs?
-    only_exp:bool=False, # Only exported messages (nbdev export directive in content or meta)?
+    only_err:bool=None, # Only code messages with error outputs if True, only those without if False, all if None
+    only_exp:bool=None, # Only exported messages (nbdev export directive in content or meta) if True, only unexported if False, all if None
     ids='', # Optionally filter by ids (comma-separated str, or list); results are always in dialog order, whatever order the ids are given
     before:int=0, # Also include n messages before each match
     after:int=0, # Also include n messages after each match
@@ -201,8 +201,8 @@ def find_msgs(self:Dialog,
     def _ok(m):
         if headers_only and not m.header_level(): return False
         if msg_type and m.msg_type!=msg_type: return False
-        if only_err and not m.has_error: return False
-        if only_exp and not m.exported: return False
+        if only_err is not None and bool(m.has_error)!=only_err: return False
+        if only_exp is not None and bool(m.exported)!=only_exp: return False
         if pred and not pred(m): return False
         if idset is not None and m.id not in idset: return False
         return not pat or bool(pat.search(_txt(m)))
@@ -220,10 +220,9 @@ def find_msgs(
     re_pattern:str='', # Regex over content (a prompt's reply included), DOTALL+MULTILINE; an invalid regex matches literally
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
     **kwargs,
-)->MsgRows: # Snapshot rows (`id`, `msg_type`, `content`, `out`, `meta`), indexed by id and shown as previews with context rows marked
-    "Find messages in the dialog file matching all the given criteria; for live results, call `Dialog.find_msgs`"
-    fm = _to_dlg(dlg).find_msgs(re_pattern, **kwargs)
-    return MsgRows(MsgRow(m, kind='match' if m.id in fm.matched else 'context') for m in fm)
+)->FoundMsgs: # Live messages of a fresh read of the file, indexed by id, with context rows marked
+    "Find messages in the dialog file matching all the given criteria"
+    return _to_dlg(dlg).find_msgs(re_pattern, **kwargs)
 
 # %% ../nbs/04_dlgskill.ipynb #1afa6ffc
 @patch

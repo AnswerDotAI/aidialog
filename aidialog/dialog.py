@@ -6,8 +6,8 @@ Docs: https://AnswerDotAI.github.io/aidialog/dialog.html.md"""
 
 # %% auto #0
 __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'MAXLEN', 'AI_RENDERERS', 'INTERRUPTED', 'tiny_png', 'add_id_hash',
-           'Msgs', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
-           'prompt_output', 'Message', 'MsgRow', 'MsgRows', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds',
+           'Msgs', 'BaseDialog', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
+           'prompt_output', 'Message', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds',
            'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval',
            'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py', 'dlg2py', 'copy_export',
            'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'tool_md', 'usage_md', 'fmt_tools', 'msg2xml',
@@ -63,9 +63,8 @@ class Msgs(L):
     def __repr__(self): return str(self.show(rows=20))
 
 # %% ../nbs/01_dialog.ipynb #bc320318
-class Dialog(BasicRepr):
+class BaseDialog(BasicRepr):
     "A named, ordered list of messages"
-    path_ = mtime_ = None  # stamped by `aidialog.ipynb`'s read/write: the file this dialog came from, and its mtime then
     def __init__(self,
         messages=None, # Initial `Message`s, shared not copied: a wrap of live messages is a view over the originals
         name='', # Dialog name, usually the file stem
@@ -73,8 +72,6 @@ class Dialog(BasicRepr):
     ):
         if isinstance(messages, str): raise TypeError("Dialog(messages, name): first arg is the messages - pass name='...' by keyword")
         self.name,self.messages,self.meta = str(name),Msgs(listify(messages)),dict(meta or {})
-        for m in self.messages:  # claim only orphans: wrapping live messages must not steal them from their real dialog
-            if m.dlg is None: m.dlg = self
 
     def __len__(self): return len(self.messages)
     def __bool__(self): return True
@@ -96,7 +93,15 @@ class Dialog(BasicRepr):
 
 {msgs}'''
 
-add_id_hash(Dialog, 'name')
+class Dialog(BaseDialog):
+    "A `BaseDialog` that sets `dlg` on its messages"
+    path_ = mtime_ = None
+    def __init__(self, messages=None, name='', meta=None):
+        super().__init__(messages, name, meta)
+        for m in self.messages:
+            if m.dlg is None: m.dlg = self
+
+add_id_hash(BaseDialog, 'name')
 
 # %% ../nbs/01_dialog.ipynb #3171584d
 @patch
@@ -126,10 +131,10 @@ class Message:
     meta_attrs = dict(skipped='skipped', pinned='pinned')
     skipped, pinned = 0, 0  # class-level defaults; instances get real values via `**xtras` or cell metadata
     __skip__ = ['dlg']  # ownership, not message state: `vars_pub` field lists (`flds`, copies) leave it out
+    dlg = None
 
     def __init__(self,
         content='', # The message text: markdown, code, or a prompt's request
-        dlg=None, # The `Dialog` this message belongs to
         output='', # Jupyter-style output list (code and prompt messages), or ''
         id=None, # Message id; 4 random hex bytes if None
         msg_type='code', # One of `smsg_types`: code, note, prompt, or raw
@@ -148,13 +153,11 @@ class Message:
         if msg_type is UNSET: msg_type = snote
         if output   is UNSET: output=[] if msg_type in (scode, sprompt) else ''
         self.msg_type = msg_type # Set type first, since it clears output
-        self.dlg = dlg
-        store_attr(but=['dlg', 'msg_type', 'xtras'])
+        store_attr(but=['msg_type', 'xtras'])
         for k,v in xtras.items(): setattr(self, k, v)
 
-    # Invalidation hooks, called when output/content/type change; subclasses clear their extra caches here
+    # Invalidation hook, called when output or type change; subclasses clear their extra output caches here
     def clear_out_cache(self): self._ai_rend = None
-    def clear_inp_cache(self): pass
 
     @DepProp
     def output(self): self.clear_out_cache()
@@ -165,7 +168,7 @@ class Message:
         return [] if v is None and self.msg_type in (scode, sprompt) else v
 
     @DepProp
-    def content(self): self.clear_inp_cache()
+    def content(self): pass
 
     @content.norm
     def content(self, v): return '' if v is None else v
@@ -173,7 +176,6 @@ class Message:
     @DepProp
     def msg_type(self):
         self.clear_out_cache()
-        self.clear_inp_cache()
         self.output = [] if self.msg_type in (scode, sprompt) else ''
 
     @property
@@ -204,7 +206,7 @@ class Message:
 
 # %% ../nbs/01_dialog.ipynb #135858d9
 add_id_hash(Message, 'id')
-Dialog.msg_cls = Message
+BaseDialog.msg_cls = Message
 
 # %% ../nbs/01_dialog.ipynb #145c8a42
 @patch
@@ -221,24 +223,9 @@ def preview(self:Message,
 
 Message._repr_markdown_ = Message.preview
 
-# %% ../nbs/01_dialog.ipynb #a72644ce
-class MsgRow:
-    "Snapshot of one message: `id`, `msg_type`, `content`, `out` (reply or output text), and `meta`; shown as its preview, with `-` in place of the first `:` on a context row"
-    def __init__(self, m, maxlen=MAXLEN, kind='match'):
-        self.id,self.msg_type,self.content,self.kind = m.id,m.msg_type,m.content,kind
-        self.meta = copy.deepcopy(m.meta)
-        self.out = (m.ai_res or '') if m.msg_type==sprompt else str(m.output or '')
-        self._pv = m.preview(maxlen, sep=':' if kind=='match' else '-')
-    def __repr__(self): return self._pv
-
-class MsgRows(Found, L):
-    "Find-result `MsgRow`s: index by message id (exact or unique prefix), never by position"
-    _unit = 'message'
-    def __repr__(self): return '\n'.join(repr(o) for o in self)
-
 # %% ../nbs/01_dialog.ipynb #a0465cdb
 @patch
-def mk_message(self:Dialog,
+def mk_message(self:BaseDialog,
     content:str, # Message text
     idx=-1, # Insert position; -1 appends
     after=None, # Insert after this `Message` or id
@@ -251,7 +238,7 @@ def mk_message(self:Dialog,
 ):
     "Create and insert a message, appending by default"
     if msg_type==scode and isinstance(output,str): output = loads(output or '[]')
-    msg = self.msg_cls(content, self, msg_type=msg_type, output=output, meta=meta, **kwargs)
+    msg = self.msg_cls(content, msg_type=msg_type, output=output, meta=meta, **kwargs)
     if export: msg.meta_exported = True
     if 'id' not in kwargs:  # generated ids must not collide, even if the global random stream was re-seeded
         while any(m.id==msg.id for m in self.messages): msg.id = rtoken_hex(4)
@@ -263,9 +250,16 @@ def mk_message(self:Dialog,
     self.messages.insert(idx, msg)
     return msg
 
+@patch
+@delegates(BaseDialog.mk_message)
+def mk_message(self:Dialog, content:str, **kwargs):
+    res = BaseDialog.mk_message(self, content, **kwargs)
+    res.dlg = self
+    return res
+
 # %% ../nbs/01_dialog.ipynb #d499654b
 @patch
-def mk_messages(self:Dialog, msgs, after=None, before=None):
+def mk_messages(self:BaseDialog, msgs, after=None, before=None):
     "Make new messages and insert them sequentially into the notebook after/before a specific message."
     def _kws(m): return {o: getattr(m,o) for o in m.flds if o!='id'}
     return [after:=self.mk_message(m.content,output=m.output,attachments=m.attachments,after=after, before=before, **_kws(m)) for m in msgs]
@@ -304,7 +298,7 @@ def get_msg(id_, dlg):
 
 # %% ../nbs/01_dialog.ipynb #2b6197c3
 @patch
-def remove_msgs(self:Dialog, msgs):
+def remove_msgs(self:BaseDialog, msgs):
     "Remove messages from dialog, return removed list"
     s = set(msgs)
     self.messages[:] = [m for m in self.messages if m not in s]
@@ -788,7 +782,7 @@ def source(self:Message):
     return self.content or ''
 
 @patch(as_prop=True)
-def cells(self:Dialog):
+def cells(self:BaseDialog):
     "Messages as cells: dialogs duck-type as notebooks for read-only notebook consumers"
     return self.messages
 

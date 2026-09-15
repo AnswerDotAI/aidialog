@@ -86,7 +86,7 @@ def msgs2ipynb(msgs, meta=None, version=2):
     if repairs := repair_nb(nb): print('NB repair:', '; '.join(repairs))
     return nb
 
-def get_ipynb(dlg:Dialog, version=2, msgs=None):
+def get_ipynb(dlg:BaseDialog, version=2, msgs=None):
     "Notebook object for `dlg`; `msgs` defaults to all its messages"
     return msgs2ipynb(dlg.messages if msgs is None else msgs, dict(dlg.meta), version)
 
@@ -98,7 +98,7 @@ def safe_mtime(p):
     with suppress(FileNotFoundError): return p.stat(follow_symlinks=False).st_mtime
 
 # %% ../nbs/02_ipynb.ipynb #ea5fa1dd
-def write_ipynb(dlg:Dialog, fname=None, version=2, msgs=None, **kwargs):
+def write_ipynb(dlg:BaseDialog, fname=None, version=2, msgs=None, **kwargs):
     """Write `dlg` as a notebook, or return its JSON string if `fname` is None.
 
     Pass `kwargs`, such as `uid` and `gid`, to `atomic_save`."""
@@ -110,7 +110,7 @@ def write_ipynb(dlg:Dialog, fname=None, version=2, msgs=None, **kwargs):
 
 # %% ../nbs/02_ipynb.ipynb #5527e596
 @patch
-def write(self:Dialog, base_path, version=2, msgs=None, **kwargs):
+def write(self:BaseDialog, base_path, version=2, msgs=None, **kwargs):
     write_ipynb(self, Path(base_path).expanduser()/f'{self.name}.ipynb', version=version, msgs=msgs, **kwargs)
 
 # %% ../nbs/02_ipynb.ipynb #0e16e93a
@@ -135,7 +135,7 @@ def _output_from_cell(cell):
 
 # %% ../nbs/02_ipynb.ipynb #1b43e94f
 @patch(cls_method=True)
-def from_cell(cls:Message, cell, dlg=None):
+def from_cell(cls:Message, cell):
     "Convert single notebook cell to message object"
     cell = NbCell(0, obj2dict(cell))
     meta = dict(cell.metadata)
@@ -146,14 +146,19 @@ def from_cell(cls:Message, cell, dlg=None):
         content = content.split('\n', 1)[1] if '\n' in content else ''
     output = '' if msg_type in (snote,sraw) else _output_from_cell(cell)
     atts = [dict2att(att_id, att_data) for att_id, att_data in cell.get('attachments', {}).items()]
-    return cls(content, id=cell.id, output=output, msg_type=msg_type, dlg=dlg, attachments=atts, meta=meta, **kwargs)
+    return cls(content, id=cell.id, output=output, msg_type=msg_type, attachments=atts, meta=meta, **kwargs)
 
 @patch
-def cell2msg(self:Dialog, cell): return self.msg_cls.from_cell(cell, dlg=self)
+def cell2msg(self:BaseDialog, cell): return self.msg_cls.from_cell(cell)
+@patch
+def cell2msg(self:Dialog, cell):
+    res = self.msg_cls.from_cell(cell)
+    res.dlg = self
+    return res
 
 # %% ../nbs/02_ipynb.ipynb #aef05275
 @patch
-def from_cells(self:Dialog, cells):
+def from_cells(self:BaseDialog, cells):
     self.messages = Msgs(cells).map(self.cell2msg)
     return self
 
