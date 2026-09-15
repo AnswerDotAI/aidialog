@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.34
+
+### New Features
+
+- Split Dialog into BaseDialog plus dlg-owning Dialog; return live FoundMsgs from file `find_msgs`; `only_exp`/`only_err` accept tristate ([#61](https://github.com/AnswerDotAI/aidialog/issues/61))
+
+
 ## 0.0.33
 
 ### New Features
