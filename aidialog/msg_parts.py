@@ -6,7 +6,7 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'fence_call_re', 'Part', 'Text',
-           'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputVideo', 'InputFile', 'mk_part', 'Msg',
+           'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputFile', 'InputVideo', 'mk_part', 'Msg',
            'msg2dict', 'dict2msg', 'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
            'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
            'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
@@ -74,8 +74,20 @@ class Media(Part):
 # chkstyle: skip
 class InputImage(Media, tag=PartType.input_image): "An image input."
 class InputAudio(Media, tag=PartType.input_audio): "An audio input."
-class InputVideo(Media, tag=PartType.input_video): "A video input."
 class InputFile (Media, tag=PartType.input_file ): "A file input."
+
+class InputVideo(Media, tag=PartType.input_video):
+    "A video input; `start`/`end` clip it to a range and `fps` sets the sampled frame rate, for providers that support them"
+    def __init__(self,
+        text=None,  # URL or data URL
+        mime=None,  # Media type
+        start=None, # Clip start, in seconds
+        end=None,   # Clip end, in seconds
+        fps=None,   # Frames per second sampled from the video
+        **kw
+    ):
+        super().__init__(text, mime, **kw)
+        store_attr('start,end,fps')
 
 # %% ../nbs/00_msg_parts.ipynb #3c5ecde9
 def mk_part(type, **kw):
