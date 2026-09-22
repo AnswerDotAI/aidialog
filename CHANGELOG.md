@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.35
+
+### New Features
+
+- Remove #ai markdown link media support from hist: drop `media_path`, `media_extra`, and static media resolution ([#64](https://github.com/AnswerDotAI/aidialog/issues/64))
+- Simplify legacy tool/usage envelope parsing: drop unreleased ::: syntax, make markdown=1 attribute optional in details tags ([#62](https://github.com/AnswerDotAI/aidialog/issues/62))
+
+
 ## 0.0.34
 
 ### New Features
