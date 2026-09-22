@@ -163,34 +163,6 @@ def merge_media(text, parts):
     if not has_img: return '\n\n'.join(filter(None, [text, *(p.text for p in parts)]))
     return [*parts, *([Text(text)] if text else [])]
 
-# %% ../nbs/03_hist.ipynb #1e8a1f1b
-@patch
-def media_path(self:Dialog, ref):
-    "Resolve a file reference to an absolute path. Hosts can override path and safety rules."
-    p = Path(ref)
-    if not p.is_absolute() and self.path_: p = Path(self.path_).parent/p
-    return p.resolve()
-
-@patch
-def media_path(self:Message, ref):
-    "Resolve this message's file reference using its dialog, or the working directory."
-    return self.dlg.media_path(ref) if self.dlg else Path(ref).resolve()
-def _mk_media_tag(ref, msg, aim_info, max_im_sz=None):
-    "Prepare a media tag and data from a file, web URL, or data URL."
-    kw = dict(prep=msg.prep_img, unavail_msg=msg.UNSUPPORTED_MSG)
-    if ref.startswith('data:'):
-        meta,data = ref.split(',', 1)
-        mime = meta.removeprefix('data:').split(';')[0]
-        return media_item('content', data[:10], lambda: base64.b64decode(data), aim_info, mime, max_im_sz, **kw)
-    data = lambda: MediaUrl(ref) if ref.startswith(('http://', 'https://')) else msg.media_path(ref).read_bytes()
-    return media_item('content', ref, data, aim_info, max_im_sz=max_im_sz, **kw)
-
-_static_pat = re.compile(r'!\[[^\]]*\]\(([^)#]+)#ai\)')
-def _media_static(msg, aim_info, max_im_sz=None):
-    "Media items for `#ai`-tagged markdown links in `msg.content`"
-    if '#ai' not in msg.content: return []
-    return list(chain.from_iterable(_mk_media_tag(ref, msg, aim_info, max_im_sz) for ref in _static_pat.findall(msg.content)))
-
 # %% ../nbs/03_hist.ipynb #909e346f
 def get_refs(cts, sigil='&'):
     'Return sorted unique names referenced via sigil`name` or sigil`[name, name]` pattern in msgs'
@@ -266,16 +238,10 @@ def hist_xml(self:Message, last=False):
 
 # %% ../nbs/03_hist.ipynb #e0542c55
 @patch
-def media_extra(self:Message, aim_info, max_im_sz=None):
-    "Collect media from `#ai` Markdown links. Hosts can override this to add sources."
-    return _media_static(self, aim_info, max_im_sz)
-
-@patch
 def to_media(self:Message, aim_info, max_im_sz=None):
-    "Aggregate media from attachments, `media_extra`, and code outputs"
+    "Aggregate media from attachments and code outputs"
     media_ctx = []
     if media_atts := _media_atts(self, aim_info, max_im_sz): media_ctx += media_atts
-    if extra := self.media_extra(aim_info, max_im_sz): media_ctx += extra
     if self.msg_type == scode:
         if img_outputs := _img_output(self, aim_info, max_im_sz): media_ctx += img_outputs
     return media_ctx
