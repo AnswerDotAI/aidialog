@@ -2,6 +2,49 @@
 
 <!-- do not remove -->
 
+## 0.0.35
+
+### New Features
+
+- Remove #ai markdown link media support from hist: drop `media_path`, `media_extra`, and static media resolution ([#64](https://github.com/AnswerDotAI/aidialog/issues/64))
+- Simplify legacy tool/usage envelope parsing: drop unreleased ::: syntax, make markdown=1 attribute optional in details tags ([#62](https://github.com/AnswerDotAI/aidialog/issues/62))
+
+
+## 0.0.34
+
+### New Features
+
+- Split Dialog into BaseDialog plus dlg-owning Dialog; return live FoundMsgs from file `find_msgs`; `only_exp`/`only_err` accept tristate ([#61](https://github.com/AnswerDotAI/aidialog/issues/61))
+
+
+## 0.0.33
+
+### New Features
+
+- Drop the full text size from truncated previews, keeping only the trailing missing-character count ([#60](https://github.com/AnswerDotAI/aidialog/issues/60))
+
+
+## 0.0.32
+
+### New Features
+
+- Allow messages to be converted, exported, split, and resolve media without a dialog; add msgs2py and msgs2ipynb helpers ([#59](https://github.com/AnswerDotAI/aidialog/issues/59))
+
+
+## 0.0.31
+
+### New Features
+
+- Rewrite docstrings and narrative docs across aidialog modules for clearer ([#58](https://github.com/AnswerDotAI/aidialog/issues/58))
+
+
+## 0.0.30
+
+### New Features
+
+- Message previews show node size and missing count separately ([#57](https://github.com/AnswerDotAI/aidialog/pull/57)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.29
 
 ### New Features

@@ -6,7 +6,7 @@ Docs: https://AnswerDotAI.github.io/aidialog/msg_parts.html.md"""
 
 # %% auto #0
 __all__ = ['PartType', 'tool_info', 'usage_info', 'think_start', 'think_end', 're_think', 'fence_call_re', 'Part', 'Text',
-           'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputVideo', 'InputFile', 'mk_part', 'Msg',
+           'Thinking', 'Refusal', 'Media', 'InputImage', 'InputAudio', 'InputFile', 'InputVideo', 'mk_part', 'Msg',
            'msg2dict', 'dict2msg', 'ToolUse', 'ToolResult', 'display_list', 'Completion', 'mk_tool_res_msg', 'sys_text',
            'part_txt', 'data_url', 'url_mime', 'MediaUrl', 'mk_content', 'parse_tools', 'strip_tools', 'conv_tools',
            'extract_fence_call', 'mk_result_fence', 'split_fence_msgs', 'tool_text', 'fmt2hist', 'ToolResponse',
@@ -74,8 +74,20 @@ class Media(Part):
 # chkstyle: skip
 class InputImage(Media, tag=PartType.input_image): "An image input."
 class InputAudio(Media, tag=PartType.input_audio): "An audio input."
-class InputVideo(Media, tag=PartType.input_video): "A video input."
 class InputFile (Media, tag=PartType.input_file ): "A file input."
+
+class InputVideo(Media, tag=PartType.input_video):
+    "A video input; `start`/`end` clip it to a range and `fps` sets the sampled frame rate, for providers that support them"
+    def __init__(self,
+        text=None,  # URL or data URL
+        mime=None,  # Media type
+        start=None, # Clip start, in seconds
+        end=None,   # Clip end, in seconds
+        fps=None,   # Frames per second sampled from the video
+        **kw
+    ):
+        super().__init__(text, mime, **kw)
+        store_attr('start,end,fps')
 
 # %% ../nbs/00_msg_parts.ipynb #3c5ecde9
 def mk_part(type, **kw):
@@ -295,34 +307,24 @@ def strip_tools(s, tools=True, usage=True):
 think_start,think_end = '<!--think_start-->','<!--think_end-->'
 re_think = re.compile(rf'{re.escape(think_start)}.*?{re.escape(think_end)}\n?', re.DOTALL)
 
-# Frozen legacy envelope recognition, used only by `conv_tools`. These are the
-# exact patterns fastllm shipped for the released `<details markdown='1'>`
-# envelopes plus the never-released `::: {.details}` spelling.
-_lg_tool_tag = "<details class='tool-usage-details' markdown='1'>"
-_lg_token_tag = "<details class='token-usage-details' markdown='1'>"
-_lg_tool_attrs, _lg_token_attrs = "{.details .tool-usage-details}", "{.details .token-usage-details}"
-_lg_tools = re.compile(
-    fr"^(?:{_lg_tool_tag}\n*(?:<summary>(?P<summ1>.*?)</summary>\n*)?\n*```json\n+(?P<json1>.*?)\n+```\n+</details>"
-    fr"|(?P<fence>:{{3,}}) {re.escape(_lg_tool_attrs)}\n+(?:## (?P<summ2>.*?)\n+)?```json\n+(?P<json2>.*?)\n+```\n+(?P=fence)$)",
-    flags=re.DOTALL|re.MULTILINE)
-_lg_token = re.compile(
-    fr"^(?:{re.escape(_lg_token_tag)}\n*<summary>(?P<tsumm1>.*?)</summary>\n*\n*`(?P<trepr1>.*?)`\n*\n*</details>"
-    fr"|(?P<tfence>:{{3,}}) {re.escape(_lg_token_attrs)}\n+## (?P<tsumm2>.*?)\n+`(?P<trepr2>.*?)`\n+(?P=tfence)$)\n?",
-    flags=re.DOTALL|re.MULTILINE)
+# Frozen legacy envelope recognition, used only by `conv_tools`: the `<details>`
+# envelopes fastllm shipped, with and without `markdown='1'`.
+_lg_tool_tag = "<details class='tool-usage-details'(?: markdown='1')?>"
+_lg_token_tag = "<details class='token-usage-details'(?: markdown='1')?>"
+_lg_tools = re.compile(fr"^{_lg_tool_tag}\n*(?:<summary>.*?</summary>\n*)?\n*```json\n+(?P<json>.*?)\n+```\n+</details>", flags=re.DOTALL|re.MULTILINE)
+_lg_token = re.compile(fr"^{_lg_token_tag}\n*<summary>(?P<summ>.*?)</summary>\n*\n*`(?P<det>.*?)`\n*\n*</details>\n?", flags=re.DOTALL|re.MULTILINE)
 
 def conv_tools(s):
-    "Convert legacy tool/usage envelopes in `s` (both historical spellings) to the fenced JSON wire format. Idempotent."
+    "Convert legacy tool/usage envelopes in `s` to the fenced JSON wire format. Idempotent."
     def _tool(m):
-        tj = m['json1'] if m['json1'] is not None else m['json2']
-        try: d = json.loads(tj.strip())
+        try: d = json.loads(m['json'].strip())
         except Exception: return m[0]
         call = d.get('call') or {}
         res = dict(id=d.get('id'), name=call.get('function'), args=call.get('arguments') or {}, result=d.get('result'))
         if d.get('server'): res['server'] = True
         return fenced(dumps(res, indent=2, ensure_ascii=False), tool_info)
     def _tok(m):
-        summ = m['tsumm1'] if m['tsumm1'] is not None else m['tsumm2']
-        det = m['trepr1'] if m['trepr1'] is not None else m['trepr2']
+        summ,det = m['summ'],m['det']
         return fenced(dumps(dict(summary=summ, detail=det), ensure_ascii=False), usage_info)
     return _lg_token.sub(_tok, _lg_tools.sub(_tool, s))
 
@@ -373,7 +375,7 @@ def _media_tag(p):
 def tool_text(
     res, # A tool function's return value
 ):
-    "Canonical string form of a tool result: `Part` lists render as text and `<media>` tags, dicts/lists as JSON, everything else via `str`"
+    "Convert a tool result to text, using compact media tags and JSON for structured values."
     if isinstance(res, str): return res
     if isinstance(res, list) and all(isinstance(o, Part) for o in res): return '\n'.join(o.ctext for o in res)
     if isinstance(res, (dict, list)): return dumps(res, ensure_ascii=False, default=str)
@@ -433,7 +435,7 @@ class MdStr(str): pass
 
 # %% ../nbs/00_msg_parts.ipynb #4f105e4d
 def trunc_str(s, mx=2000, skip=10, replace="TRUNCATED"):
-    "Truncate `s` to `mx` chars max, adding `replace` if truncated; `mx=None` disables truncation"
+    "Shorten ordinary display strings using `mx` and mark truncation with `replace`."
     if mx is None or isinstance_str(s, ('FullResponse','Safe','PrettyString')): return s
     if not isinstance(s, str): s = str(s)
     s = type(s)(s.rstrip())
@@ -494,7 +496,7 @@ def doc(self:Thinking, showthink=False, mx=2000):
 def formatted(self:ToolUse): return '' if self.server else f"\n- ⏳ {_tc_summary(self)} ⏳\n"
 @patch
 def doc(self:ToolUse, showthink=False, mx=2000):
-    "A server call renders as a completed block, its `text` (the provider's result, when it gave one) as the result; any other pending call is an ⏳ row"
+    "Render a completed server call or a pending client-call row."
     if not self.server: return self.formatted.strip()
     return mk_tr_details(self.replace(text=self.text or 'Server tool call executed.'), mx=mx).strip()
 
@@ -503,7 +505,7 @@ def doc(self:ToolUse, showthink=False, mx=2000):
 def formatted(self:ToolResult): return mk_tr_details(self)
 @patch
 def doc(self:ToolResult, showthink=False, mx=2000):
-    "A result with no id can't be re-parsed into history (e.g. Gemini code execution), so it doesn't render"
+    "Render an identified result as a tool block. Omit results without an ID."
     return mk_tr_details(self, mx=mx).strip() if self.id else ''
 
 # %% ../nbs/00_msg_parts.ipynb #29e2b39b
@@ -515,7 +517,7 @@ def ctext(self:Media): return _media_tag(self)
 
 # %% ../nbs/00_msg_parts.ipynb #e5acd16a
 def hist2fmt(msgs:list[Msg], mx=2000, showthink=False)->str:
-    "Render assistant/tool `msgs` as one formatted output string, the inverse of `fmt2hist`"
+    "Render assistant and tool messages as one editable Markdown reply."
     tus, out = {}, []
     for m in msgs:
         if m.role == 'assistant':
@@ -536,7 +538,7 @@ def mk_msg(
     content,      # Content: str, bytes (image), list of mixed content, or dict w 'role' and 'content' fields
     role="user"    # Message role if content isn't already a dict/Message
 ):
-    "Create a LiteLLM compatible message."
+    "Build a `Msg` from content, or unwrap an existing message or completion."
     if content is None: return None
     if isinstance(content, Msg): return content
     if isinstance(content, Completion): return content.message
