@@ -834,7 +834,7 @@ def execute(self:Dialog,
     timeout:int=None, # Seconds before each message's run times out
     **kwargs
 ):
-    "Run code messages on an execnb `CaptureShell`, capturing outputs into each message; `save` persists them"
+    "Run code messages on an execnb `CaptureShell`, capturing outputs into each message, and return a `RunResult` status report; blocks (use `asyncio.to_thread` in async hosts); `save` persists outputs"
     from execnb.shell import CaptureShell
     if not ids and not any(map(kwargs.get, ('above','below','all'))): kwargs['all'] = True
     sh = ifnone(shell, CaptureShell())

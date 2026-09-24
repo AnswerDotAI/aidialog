@@ -1,8 +1,8 @@
 """Read, search, and edit notebook and dialog content through aidialog's `Dialog` and `Message` APIs. Use for cell sources, stored outputs, prompt/reply pairs, and structural message operations.
 
-**Workflow.** Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Before editing, read `nbdev.skill` and `exhash.skill`; for cross-notebook searches, read `rgapi.skill` (`nbrg`).
+**Workflow.** Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Read `nbdev.skill` before any notebook work, `exhash.skill` before editing, and `rgapi.skill` (`nbrg`) for cross-notebook searches.
 
-Use message operations for dialogs and `fastcore.nbio.Notebook`/`NbCell` operations for plain notebooks. Diagnose with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files. Propose missing structural operations; never splice notebook JSON.
+Use the dialog API for both notebooks and dialogs; drop to `fastcore.nbio`'s `Notebook`/`NbCell` only for an operation it lacks, and propose adding that operation. Diagnose broken files with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files; never splice notebook JSON.
 
 View fresh `lnhashview_msg`/`lnhashview_cell` addresses before hash-verified edits. Use plain `msg_*` editors where exhash cannot express the operation. Use structural `find_msgs` predicates for Python symbols/ASTs. Read neighboring prose, including with `ids=`.
 
@@ -12,17 +12,13 @@ Call documented APIs without speculative fallbacks. Display results bare, never 
 
 **Views and identity.** Summaries use `id:t[directives]:content`: c=code, n=note, p=prompt, r=raw. Replies follow `>`; truncations end with a bracketed missing-character count. Directives are nbdev metadata, as in nbio summaries. XML uses `item2xml`, `<out>` replies, and directive attributes such as bare `export`.
 
-File searches and method searches both return live `FoundMsgs`. A file search reads a fresh `Dialog`. Its messages are not the ones a held `Dialog` holds. An edit to them reaches disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows use `-` instead of the first `:`. Default context is one neighbor each side, including with `ids=`; `headers_only` defaults to zero.
+File searches and method searches both return live `FoundMsgs`. A file search reads a fresh `Dialog`; its messages are not the ones a held `Dialog` holds, so an edit to them reaches disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows use `-` instead of the first `:`.
 
 **Placement and metadata.** The host calls `set_cur_msg`; writes never move it. Unanchored adds follow it, or append if unset/missing. Chain explicit `after=` anchors for successive additions.
 
-`m.exported` and `only_exp` include source and metadata directives. `only_exp` and `only_err` take `True`, `False`, or `None` for all. Assignable `m.meta_exported` uses metadata only. `Message.update`/`update_msg` replace attributes, including whole `meta`; `mergemeta` deep-merges, with `None` deleting keys. `export=True` adds and `False` removes, migrating source export to metadata without a negative directive. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
+`m.exported` (content or meta directive) differs from assignable `m.meta_exported` (meta only); `Message.update`/`update_msg` replace attributes (`meta=` replaces the whole dict), with `mergemeta=` and `export=` in `doc(Message.update)`. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
 
-**Kernel execution.** `%nbrun` runs in the current kernel. `Dialog.execute`/`Message.execute` capture outputs on held messages and return `RunResult` (abbreviated successes, exceptions on failure). They block; use `asyncio.to_thread` in async hosts. Read `Dialog.execute` for selection, shell lifetime, and saving.
-
-`%%add_msg [dlg] [msg_type] [export] [before=<id>|after=<id>]` takes an unquoted body, trimming trailing newlines. Keywords override bare tokens.
-
-`%nbrun [IDS/FLAGS] [fname=PATH]` accepts `above`, `below`, `all`, `exported`, `ignore_eval`, `continue_on_error`, and `show`. `fname` overrides `set_dlg`; no selection runs all participating code cells. Only explicit ids display outputs unless `show`. Errors always name the cell; the final `nbrun: N cells ok` includes any failure count. Execution uses the kernel's namespace and standard output/error handling. The magic returns a coroutine for the host to await.
+**Kernel execution.** `%nbrun` runs in the current kernel; `%%add_msg` adds a message from an unquoted body: `doc(nbrun_magic)`, `doc(add_msg_magic)`. `Dialog.execute`/`Message.execute` capture outputs on held messages; `doc(Dialog.execute)` covers selection, shell lifetime, return value, blocking, and saving.
 
 Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
@@ -175,7 +171,7 @@ def find_msgs(self:Dialog,
     ids='', # Optionally filter by ids (comma-separated str, or list); results are always in dialog order, whatever order the ids are given
     before:int=0, # Also include n messages before each match
     after:int=0, # Also include n messages after each match
-    context:int=None, # Messages of context around matches (default 1, or 0 when `headers_only`)
+    context:int=None, # Messages of context around matches (default 1, also with `ids=`; 0 when `headers_only`, `before` or `after` is given)
     limit:int=None, # Max matched messages
     use_case:bool=False, # Case-sensitive matching?
     use_regex:bool=True, # Regex matching (else plain substring)?
@@ -185,7 +181,7 @@ def find_msgs(self:Dialog,
 )->FoundMsgs: # Live messages plus context rows, indexed by id, so results can be edited directly
     "Find this dialog's messages matching all the given criteria"
     ms = self.messages
-    if context is None: context = 0 if headers_only else 1
+    if context is None: context = 0 if headers_only or before or after else 1
     if header_section is not None:
         head = first(m for m in ms if _match_head(m, header_section))
         ms = section_msgs(ms, head) if head else Msgs()
@@ -561,7 +557,10 @@ def update_msg(
 
 # %% ../nbs/04_dlgskill.ipynb #fb670f10
 def add_msg_magic(line, cell):
-    "Add the magic body as a message, trimming trailing newlines; `export` sets the metadata export flag."
+    """Add the magic body as a message, trimming trailing newlines.
+
+    Usage: `%%add_msg [dlg] [msg_type] [export] [before=<id>|after=<id>]`. `export` sets the metadata export flag. `key=value`
+    tokens override bare tokens."""
     kw = {}
     for t in shlex.split(line):
         if '=' in t: kw.update([t.split('=', 1)])
@@ -595,7 +594,11 @@ async def _run_nb_cells(shell, ids, fname, stop=True, show=False, **kw):
     print(f'nbrun: {n} cell{"s"*(n!=1)} ok'+(f', {fails} failed' if fails else ''))
 
 def nbrun_magic(line):
-    "Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides, a bare line runs all"
+    """Run code cells from the current notebook (`set_dlg`) by id prefix; bare tokens are flags or id prefixes, `fname=` overrides, a bare line runs all.
+
+    Flags are `above`, `below`, `all`, `exported`, `ignore_eval`, `continue_on_error`, and `show`. Only cells named by id display
+    their outputs, unless `show`. An error names its cell, and the closing `nbrun: N cells ok` line counts any failures. Cells run
+    in the kernel's namespace with normal stdout and stderr. Returns a coroutine for the host to await."""
     kw,ids = {},[]
     for t in shlex.split(line):
         if '=' in t: kw.update([t.split('=', 1)])
