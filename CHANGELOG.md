@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.36
+
+### New Features
+
+- Move dlgskill magic and execute details into docstrings, trimming the skill summary; default `find_msgs` context to 0 when before/after given ([#65](https://github.com/AnswerDotAI/aidialog/issues/65))
+
+
 ## 0.0.35
 
 ### New Features
