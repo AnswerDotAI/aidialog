@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.37
+
+### New Features
+
+- Add ids= filter to Dialog.view, allow maxlen=None for unlimited previews, and reject live Dialog objects in `view_msgs` ([#66](https://github.com/AnswerDotAI/aidialog/issues/66))
+
+
 ## 0.0.36
 
 ### New Features
