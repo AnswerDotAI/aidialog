@@ -51,7 +51,7 @@ class Msgs(L):
 
     def _sep(self, m): return ':'
     def show(self,
-        maxlen:int=MAXLEN, # Maximum characters per preview line
+        maxlen:int=MAXLEN, # Maximum characters per preview line (None: no limit)
         rows:int=None, # Max messages to show (None: all)
     ):
         "One `preview` per message: a row line, plus a reply line for prompts"
@@ -211,7 +211,7 @@ BaseDialog.msg_cls = Message
 # %% ../nbs/01_dialog.ipynb #145c8a42
 @patch
 def preview(self:Message,
-    maxlen:int=MAXLEN, # Maximum characters per line
+    maxlen:int=MAXLEN, # Maximum characters per line (None: no limit)
     sep:str=':', # Separator before the content; a find shows `-` on context rows
 ):
     "Escaped summary rows: `id:t[directives]:content` (t: c=code n=note p=prompt r=raw; the bracket shows meta-form nbdev directives, as in nbio's `CellRow`), plus a `> ` line for a prompt's reply; a contentless tagged raw shows its `<kind>` instead. A cut row ends with the count of characters missing"
@@ -745,9 +745,12 @@ def view(self:Dialog,
     incl_out:bool=False, # Include code outputs?
     only_errors:bool=False, # Show only code messages with error outputs (implies `incl_out`)?
     trunc_out:bool=True, # Truncate each output to ~512 chars?
+    ids='', # Only these messages: ids or unique prefixes, as a list or a comma-separated string
 ):
-    "This dialog as concise XML; meta-exported messages carry a bare `export` attr"
-    ms = [m for m in self.messages if m.has_error] if only_errors else self.messages
+    "This dialog, or only its messages `ids`, as concise XML; meta-exported messages carry a bare `export` attr"
+    if isinstance(ids, str): ids = [o.strip() for o in ids.split(',') if o.strip()]
+    ms = [self.messages[i] for i in ids] if ids else self.messages
+    if only_errors: ms = [m for m in ms if m.has_error]
     body = ''.join(msg2xml(m, incl_out or only_errors, trunc_out) for m in ms)
     return PrettyString(f'<dialog name="{self.name}">{body}</dialog>')
 

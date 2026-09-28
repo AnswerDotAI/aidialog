@@ -145,6 +145,7 @@ def view_msgs(
     trunc_out:bool=True, # Truncate each included output to ~512 chars?
 ):
     "Show several messages, each preceded by a `# msg <id>` header"
+    if isinstance(dlg, Dialog): raise TypeError('dlg= takes an ipynb path; on a live Dialog, call its `view(ids=...)` instead')
     d = _to_dlg(dlg)
     return PrettyString('\n'.join(f"# msg {(m := d.msg(i)).id}\n{m.view(nums, start_line, end_line, lnhashs, incl_out=incl_out, trunc_out=trunc_out)}" for i in ids))
 
