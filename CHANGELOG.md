@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.38
+
+### New Features
+
+- Move hist/fmt2hist/dlg2md/`fmt_tools` to aihist; preserve `execution_count` and output metadata; add `raw_api`, ToolResponse mimebundle, `resp_part` ([#67](https://github.com/AnswerDotAI/aidialog/issues/67))
+- Support nbdev directives ([#55](https://github.com/AnswerDotAI/aidialog/pull/55)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.0.37
 
 ### New Features
