@@ -1,24 +1,24 @@
 """Read, search, and edit notebook and dialog content through aidialog's `Dialog` and `Message` APIs. Use for cell sources, stored outputs, prompt/reply pairs, and structural message operations.
 
-**Workflow.** Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Read `nbdev.skill` before any notebook work, `exhash.skill` before editing, and `rgapi.skill` (`nbrg`) for cross-notebook searches.
+Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Read `nbdev.skill` before any notebook work, `exhash.skill` before editing, and `rgapi.skill` (`nbrg`) for cross-notebook searches.
 
-Use the dialog API for both notebooks and dialogs; drop to `fastcore.nbio`'s `Notebook`/`NbCell` only for an operation it lacks, and propose adding that operation. Diagnose broken files with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files; never splice notebook JSON.
+Use the dialog API for notebooks and dialogs; use `fastcore.nbio`'s `Notebook`/`NbCell` only for an operation it lacks, and propose adding that operation. Diagnose broken files with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files; never splice notebook JSON.
 
 View fresh `lnhashview_msg`/`lnhashview_cell` addresses before hash-verified edits. Use plain `msg_*` editors where exhash cannot express the operation. Use structural `find_msgs` predicates for Python symbols/ASTs. Read neighboring prose, including with `ids=`.
 
-Call documented APIs without speculative fallbacks. Display results bare, never slice or reformat their reprs. Review returned diffs and call `dlg.validate()`.
+Call documented APIs without speculative fallbacks. Never slice or reformat result reprs. Review returned diffs and call `dlg.validate()`.
 
-**Files and held objects.** File functions take `dlg=path`, defaulting to `set_dlg(path)`. Each call rereads; edits save automatically. Methods edit held objects until `dlg.save()`. Save before switching to file functions; reopen before resuming methods. Drop address arguments: `msg_str_replace(id, ..., dlg=p)` becomes `m.str_replace(...)`. Use `d.mk_message`/`d.remove_msgs` in memory. `Dialog(msgs)` wraps a message list; `m.dlg` retains ownership.
+File functions take `dlg=path` or use the file set by `set_dlg(path)`; each call rereads and edits autosave. Methods edit held objects; `dlg.save()` persists them. Save before switching to file functions; reopen before resuming methods. Drop file address arguments: `msg_str_replace(id, ..., dlg=p)` becomes `m.str_replace(...)`. Use `d.mk_message`/`d.remove_msgs` in memory. `Dialog(msgs)` wraps a message list; `m.dlg` retains ownership.
 
-**Views and identity.** Summaries use `id:t[directives]:content`: c=code, n=note, p=prompt, r=raw. Replies follow `>`; truncations end with a bracketed missing-character count. Directives are nbdev metadata, as in nbio summaries. XML uses `item2xml`, `<out>` replies, and directive attributes such as bare `export`.
+Summaries use `id:t[directives]:content`: c=code, n=note, p=prompt, r=raw. Replies follow `>`; truncations end with a bracketed missing-character count. Directives are nbdev metadata, as in nbio summaries. XML uses `item2xml`, `<out>` replies, and directive attributes such as bare `export`.
 
-File searches and method searches both return live `FoundMsgs`. A file search reads a fresh `Dialog`; its messages are not the ones a held `Dialog` holds, so an edit to them reaches disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows use `-` instead of the first `:`.
+File and method searches return live `FoundMsgs`. A file search reads a fresh `Dialog`, separate from a held dialog; edits to its messages reach disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows replace their first `:` with `-`.
 
-**Placement and metadata.** The host calls `set_cur_msg`; writes never move it. Unanchored adds follow it, or append if unset/missing. Chain explicit `after=` anchors for successive additions.
+The host calls `set_cur_msg`; writes never move it. Unanchored adds follow it, or append if unset/missing. Chain explicit `after=` anchors for successive additions.
 
-`m.exported` (content or meta directive) differs from assignable `m.meta_exported` (meta only); `Message.update`/`update_msg` replace attributes (`meta=` replaces the whole dict), with `mergemeta=` and `export=` in `doc(Message.update)`. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
+`m.exported` includes content/meta directives; assignable `m.meta_exported` is meta-only. `Message.update`/`update_msg` replace attributes (`meta=` replaces the whole dict); see `doc(Message.update)` for `mergemeta=`/`export=`. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
 
-**Kernel execution.** `%nbrun` runs in the current kernel; `%%add_msg` adds a message from an unquoted body: `doc(nbrun_magic)`, `doc(add_msg_magic)`. `Dialog.execute`/`Message.execute` capture outputs on held messages; `doc(Dialog.execute)` covers selection, shell lifetime, return value, blocking, and saving.
+`%nbrun` runs in the current kernel; `%%add_msg` adds a message from an unquoted body: `doc(nbrun_magic, add_msg_magic)`. `Dialog.execute`/`Message.execute` capture outputs on held messages; `doc(Dialog.execute)` covers selection, shell lifetime, return value, blocking, and saving.
 
 Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
@@ -38,7 +38,7 @@ from fastcore.utils import *
 from fastcore.meta import splice_sig, delegates
 from fastcore.xtras import str_diff
 from fastcore.xml import to_xml
-from fastcore.nbio import read_nb, select_cells, run_cell, Found
+from fastcore.nbio import read_nb, select_cells, run_cell, Found, MAXLEN
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
@@ -179,6 +179,7 @@ def find_msgs(self:Dialog,
     headers_only:bool=False, # Only heading notes (an outline view)?
     header_section:str=None, # Return the section starting with this heading, plus its children
     pred:callable=None, # Extra match criterion, e.g. from `symdef_finder`/`symref_finder`/`ast_finder`, or host-specific flags
+    maxlen:int=MAXLEN, # Maximum characters per preview line (None: no limit)
 )->FoundMsgs: # Live messages plus context rows, indexed by id, so results can be edited directly
     "Find this dialog's messages matching all the given criteria"
     ms = self.messages
@@ -210,7 +211,7 @@ def find_msgs(self:Dialog,
         keep = set()
         for i in hits: keep.update(range(max(0,i-before), min(len(ms), i+after+1)))
         hits = sorted(keep)
-    return FoundMsgs([ms[i] for i in hits], matched=matched)
+    return FoundMsgs([ms[i] for i in hits], matched=matched, maxlen=maxlen)
 
 @delegates(Dialog.find_msgs)
 def find_msgs(

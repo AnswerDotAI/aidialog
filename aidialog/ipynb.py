@@ -33,17 +33,8 @@ def unhome_atts(nb):
     "Restore notebook-metadata attachments to their cells"
     home = nb['metadata'].pop('attachments', {})
     for c in nb['cells']:
-        if (atts := home.get(c['id'])): c['attachments'] = atts
+        if (atts := home.get(c.get('id'))): c['attachments'] = atts
     return nb
-
-# %% ../nbs/02_ipynb.ipynb #58354f4a
-_out_meta_skip = {'__type'}
-
-def _clean_out_meta(o):
-    "A copy of output `o` without transient metadata; never mutates the live output"
-    o = dict(o)
-    if m := o.get('metadata'): o['metadata'] = {k:v for k,v in m.items() if k not in _out_meta_skip}
-    return o
 
 # %% ../nbs/02_ipynb.ipynb #20f31fdc
 @patch
@@ -66,11 +57,11 @@ def to_cell(self:Message, version=2):
     if self.msg_type==sprompt:
         meta['solveit_ai'] = True
         src = f'{_prompt_magic}\n{src}'
-    outkw = {}
+    outkw = dict(execution_count=self.execution_count) if self.cell_type=='code' else {}
     if self.msg_type in (scode,sprompt) and self.output:
         outputs = self.output
         if version==1 and self.msg_type==scode: outputs = json.loads(outputs)
-        outkw['outputs'] = [_clean_out_meta(o) for o in outputs]
+        outkw['outputs'] = outputs
     atts = {att.id: att2dict(att) for att in (self.attachments or [])}
     if atts: outkw['attachments'] = atts
     cell = mk_cell(src, self.cell_type, id=self.id, metadata=meta, **outkw)
@@ -146,7 +137,7 @@ def from_cell(cls:Message, cell):
         content = content.split('\n', 1)[1] if '\n' in content else ''
     output = '' if msg_type in (snote,sraw) else _output_from_cell(cell)
     atts = [dict2att(att_id, att_data) for att_id, att_data in cell.get('attachments', {}).items()]
-    return cls(content, id=cell.id, output=output, msg_type=msg_type, attachments=atts, meta=meta, **kwargs)
+    return cls(content, id=cell.get('id'), output=output, msg_type=msg_type, attachments=atts, meta=meta, execution_count=cell.get('execution_count'), **kwargs)
 
 @patch
 def cell2msg(self:BaseDialog, cell): return self.msg_cls.from_cell(cell)
