@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.40
+
+### New Features
+
+- Move Message.split and `_atts_for` from dlgskill into the core dialog module ([#68](https://github.com/AnswerDotAI/aidialog/issues/68))
+
+
 ## 0.0.39
 
 ### New Features
