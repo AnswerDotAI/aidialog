@@ -649,6 +649,38 @@ def mk_attachment(self:Message, data:bytes, content_type:str, id:str=''):
 # %% ../nbs/01_dialog.ipynb #18689653
 tiny_png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==')
 
+# %% ../nbs/01_dialog.ipynb #62789dfc
+def _atts_for(content, att_map):
+    "The attachments from `att_map` whose ids are referenced in `content`"
+    return [a for aid,a in att_map.items() if aid in content]
+
+@patch
+def split(self:Message,
+    *linenos:int, # Split before each of these 1-based lines
+):
+    "Split this message into pieces (returned as `Msgs`; the first keeps its id): one `'\\n\\n'` is absorbed at each cut (so `merge_msgs` restores blank-line-separated content byte-exactly), `meta_attrs` fields, the cell `meta`, and a leading `#| export` copy to every piece, attachments follow their references, and unreferenced ones stay on the first piece"
+    lines = self.content.splitlines()
+    cuts = [0, *[l-1 for l in linenos], len(lines)]
+    parts = ['\n'.join(lines[a:b]) for a,b in zip(cuts, cuts[1:])]
+    for i in range(len(parts)-1):  # each cut absorbs the '\n\n' that a later merge re-inserts
+        if   parts[i].endswith('\n'):     parts[i] = parts[i][:-1]
+        elif parts[i+1].startswith('\n'): parts[i+1] = parts[i+1][1:]
+    src = self.content
+    keep = {a: getattr(self, a) for a in self.meta_attrs if hasattr(self, a)}
+    att_map = {a.id: a for a in self.attachments}
+    refs = [_atts_for(p, att_map) for p in parts]
+    used = {a.id for r in refs for a in r}
+    refs[0] += [a for a in self.attachments if a.id not in used]
+    self.content, self.attachments = parts[0], refs[0]
+    res = [self]
+    for p,r in zip(parts[1:], refs[1:]):
+        p = copy_export(p, src)
+        m = type(self)(p, msg_type=self.msg_type, attachments=r, meta=copy.deepcopy(self.meta), **keep)
+        res.append(m)
+    if self.dlg is not None: self.insert_after(res[1:])
+    return Msgs(res)
+
+
 # %% ../nbs/01_dialog.ipynb #036da886
 @patch
 def todict(self:Dialog): return {k:v for k,v in asdict(self).items() if k[0]!='_'}
