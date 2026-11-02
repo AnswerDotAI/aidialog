@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.41
+
+### New Features
+
+- Preserve full-text exemption when joining Part lists in `tool_text` by wrapping combined text and media tags in 𝍁 markers ([#69](https://github.com/AnswerDotAI/aidialog/issues/69))
+
+
 ## 0.0.40
 
 ### New Features
