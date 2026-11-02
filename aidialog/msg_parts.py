@@ -346,7 +346,12 @@ def tool_text(
 ):
     "Convert a tool result to text, using compact media tags and JSON for structured values."
     if isinstance(res, str): return res
-    if isinstance(res, list) and all(isinstance(o, Part) for o in res): return '\n'.join(o.ctext for o in res)
+    if isinstance(res, list) and all(isinstance(o, Part) for o in res):
+        texts = [o.ctext for o in res]
+        marked = [len(t)>2 and t[0]==t[-1]=='𝍁' for t in texts]
+        full = any(marked) or any(getattr(t, 'full', False) for t in texts)
+        text = '\n'.join(t[1:-1] if m else t for t,m in zip(texts, marked))
+        return f'𝍁{text}𝍁' if full else text
     if isinstance(res, (dict, list)): return dumps(res, ensure_ascii=False, default=str)
     return str(res)
 
