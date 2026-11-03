@@ -7,7 +7,7 @@ Docs: https://AnswerDotAI.github.io/aidialog/dialog.html.md"""
 # %% auto #0
 __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'INTERRUPTED', 'tiny_png', 'add_id_hash', 'Msgs',
            'BaseDialog', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
-           'prompt_output', 'Message', 'get_msg', 'header_info', 'section_msgs', 'get_output_mds',
+           'prompt_output', 'get_output_mds', 'Message', 'get_msg', 'header_info', 'section_msgs',
            'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval',
            'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py', 'dlg2py', 'copy_export',
            'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'msg2xml', 'RunResult', 'export_filter']
@@ -117,7 +117,13 @@ def code_output(result='', subtype='plain', mimetype='text'): return mk_code_out
 
 def prompt_output(txt=''):
     "Create prompt output list from AI response text"
-    return [displayobj(txt, 'markdown', meta={'is_ai_res': True})] if txt else []
+    return [displayobj(txt, 'markdown')] if txt else []
+
+def get_output_mds(output):
+    "Extract text/markdown content from display_data and execute_result outputs"
+    if not output: return []
+    return [o['data']['text/markdown'] for o in output
+        if o.get('output_type') in ('display_data', 'execute_result') and 'text/markdown' in o.get('data', {})]
 
 # %% ../nbs/01_dialog.ipynb #b25cd968
 class Message:
@@ -179,10 +185,7 @@ class Message:
     def ai_res(self):
         "Extract AI response text from prompt output list"
         if self.msg_type != sprompt: return ''
-        if isinstance(self.output, str): return self.output  # Handle legacy/direct string
-        if res := first(L(self.output).filter(lambda x: nested_idx(x, 'metadata', 'is_ai_res'))):
-            return join_out(nested_idx(res, 'data', 'text/markdown')) or ''
-        return ''
+        return join_out(first(get_output_mds(self.output))) or ''
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -335,12 +338,6 @@ def section_msgs(ms, head):
 def has_error(self:Message):
     if self.msg_type != scode: return False
     return any(o.get('output_type') == 'error' for o in (self.output or []))
-
-def get_output_mds(output):
-    "Extract text/markdown content from code outputs (display_data and execute_result)"
-    if not output: return []
-    return [o['data']['text/markdown'] for o in output
-        if o.get('output_type') in ('display_data', 'execute_result') and 'text/markdown' in o.get('data', {})]
 
 # %% ../nbs/01_dialog.ipynb #4a758426
 _display_env = re.compile(r'\\begin\{(align|equation|gather|multline|eqnarray)')
