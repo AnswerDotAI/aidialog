@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.42
+
+### New Features
+
+- Drop `is_ai_res` metadata from prompt outputs; `ai_res` now reads first Markdown output via `get_output_mds`, moved next to `prompt_output` ([#70](https://github.com/AnswerDotAI/aidialog/issues/70))
+
+
 ## 0.0.41
 
 ### New Features
