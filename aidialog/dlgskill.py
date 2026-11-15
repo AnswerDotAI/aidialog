@@ -1,24 +1,26 @@
 """Read, search, and edit notebook and dialog content through aidialog's `Dialog` and `Message` APIs. Use for cell sources, stored outputs, prompt/reply pairs, and structural message operations.
 
-Start with `summary_dlg` unless reading the full dialog, then `find_msgs` or `view_dlg(incl_out=True)` for code, prose, and outputs. Read `nbdev.skill` before any notebook work, `exhash.skill` before editing, and `rgapi.skill` (`nbrg`) for cross-notebook searches.
+NB: this file is designed for an LLM reader, not a human. Add it to your LLM's context and ask it to explain.
 
-Use the dialog API for notebooks and dialogs; use `fastcore.nbio`'s `Notebook`/`NbCell` only for an operation it lacks, and propose adding that operation. Diagnose broken files with `validate_nb`, `validate_cell`, or `read_nb`. Raw text is only for unparseable files; never splice notebook JSON.
+- first: `nbdev.skill` (notebooks), `exhash.skill` (edits); cross-notebook search: `rgapi.skill` `nbrg`
+- read: `summary_dlg` (unless reading it all) → `find_msgs` or `view_dlg(incl_out=True)`; neighbouring prose too, `ids=` lookups included
+- `fastcore.nbio`: only for an operation this API lacks; propose adding it
+- edit: exhash via fresh `lnhashview_msg` or `lnhashview_cell`; `msg_*` editors only where exhash can't; then `dlg.validate()`
+- Python symbols, ASTs: structural `find_msgs` predicates
+- broken file: `validate_nb`, `validate_cell`, `read_nb`; raw text only if unparseable; never splice notebook JSON
 
-View fresh `lnhashview_msg`/`lnhashview_cell` addresses before hash-verified edits. Use plain `msg_*` editors where exhash cannot express the operation. Use structural `find_msgs` predicates for Python symbols/ASTs. Read neighboring prose, including with `ids=`.
+- functions: `dlg=path`, else `set_dlg(path)`'s file; each call rereads, autosaves; methods: held `Dialog`, `dlg.save()`; otherwise as `fastcore.editskill`
+- in memory: `d.mk_message`, `d.remove_msgs`; `Dialog(msgs)` wraps a list; `m.dlg` keeps ownership
+- file `find_msgs`: fresh `Dialog`, apart from any held one; its messages' edits: `m.dlg.save()`
+- current message: host sets it; writes never move it: successive `add_msg`: chain `after=`
+- summary row: `id:t[directives]:content` (c code, n note, p prompt, r raw); reply after `>`; `…[N]`: N characters cut
+- XML (`item2xml`): replies in `<out>`, directives as attributes; diffs: XML plus `meta:` line
+- `m.exported`: content and meta directives; `m.meta_exported`: meta only, assignable
+- `update_msg`, `Message.update`: replace attributes; `meta=` replaces whole dict; `mergemeta=` merges
+- text editors' `out=True`: prompt replies only; other outputs: assign `m.output`
 
-Call documented APIs without speculative fallbacks. Never slice or reformat result reprs. Review returned diffs and call `dlg.validate()`.
-
-File functions take `dlg=path` or use the file set by `set_dlg(path)`; each call rereads and edits autosave. Methods edit held objects; `dlg.save()` persists them. Save before switching to file functions; reopen before resuming methods. Drop file address arguments: `msg_str_replace(id, ..., dlg=p)` becomes `m.str_replace(...)`. Use `d.mk_message`/`d.remove_msgs` in memory. `Dialog(msgs)` wraps a message list; `m.dlg` retains ownership.
-
-Summaries use `id:t[directives]:content`: c=code, n=note, p=prompt, r=raw. Replies follow `>`; truncations end with a bracketed missing-character count. Directives are nbdev metadata, as in nbio summaries. XML uses `item2xml`, `<out>` replies, and directive attributes such as bare `export`.
-
-File and method searches return live `FoundMsgs`. A file search reads a fresh `Dialog`, separate from a held dialog; edits to its messages reach disk only through `m.dlg.save()`. Index by exact id or unique prefix, never position. Context rows replace their first `:` with `-`.
-
-The host calls `set_cur_msg`; writes never move it. Unanchored adds follow it, or append if unset/missing. Chain explicit `after=` anchors for successive additions.
-
-`m.exported` includes content/meta directives; assignable `m.meta_exported` is meta-only. `Message.update`/`update_msg` replace attributes (`meta=` replaces the whole dict); see `doc(Message.update)` for `mergemeta=`/`export=`. Diffs show XML and `meta:`. Text editors' `out=True` edits prompt replies only; assign other outputs through `m.output`.
-
-`%nbrun` runs in the current kernel; `%%add_msg` adds a message from an unquoted body: `doc(nbrun_magic, add_msg_magic)`. `Dialog.execute`/`Message.execute` capture outputs on held messages; `doc(Dialog.execute)` covers selection, shell lifetime, return value, blocking, and saving.
+- magics: `%nbrun` (`nbrun_magic`), `%%add_msg` (`add_msg_magic`)
+- `Dialog.execute`, `Message.execute`: capture outputs on held messages
 
 Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
