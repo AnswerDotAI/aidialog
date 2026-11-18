@@ -8,9 +8,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dialog.html.md"""
 __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'INTERRUPTED', 'tiny_png', 'add_id_hash', 'Msgs',
            'BaseDialog', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
            'prompt_output', 'get_output_mds', 'Message', 'get_msg', 'header_info', 'section_msgs',
-           'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'out_parts', 'render_md', 'ai_fmt',
-           'try_eval', 'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py', 'dlg2py',
-           'copy_export', 'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'msg2xml', 'RunResult', 'export_filter']
+           'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'out_parts', 'render_md_parts', 'render_md',
+           'ai_fmt', 'try_eval', 'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py',
+           'dlg2py', 'copy_export', 'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'msg2xml', 'RunResult',
+           'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
 import asyncio, base64, copy, random, re
@@ -407,11 +408,15 @@ def out_parts(outputs, html1st=True):
     return parts
 
 # %% ../nbs/01_dialog.ipynb #11fded06
-_md_parts = dict(txt=lambda s: fenced(s, 'output'), html=lambda s: fenced(s, '{=html}'), md=lambda s: s, img=lambda s: f'![]({s})')
+_md_parts = dict(txt=fenced, html=lambda s: fenced(s, '{=html}'), md=lambda s: s, img=lambda s: f'![]({s})')
+
+def render_md_parts(parts):
+    "Write prepared `out_parts` as Markdown"
+    return '\n\n'.join(_md_parts[k](s) for k,s in parts)
 
 def render_md(outputs, html1st=True):
     "Render notebook outputs as Markdown: text to ``` fences, HTML in `{=html}`, markdown inlined, images as data URIs"
-    return '\n\n'.join(_md_parts[k](s) for k,s in out_parts(outputs, html1st=html1st))
+    return render_md_parts(out_parts(outputs, html1st=html1st))
 
 # %% ../nbs/01_dialog.ipynb #027d1774
 INTERRUPTED = '*[Response interrupted]*'  # marker line hosts append to a reply cut off mid-stream; `ai_fmt` strips it
