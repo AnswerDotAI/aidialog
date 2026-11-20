@@ -8,9 +8,10 @@ Docs: https://AnswerDotAI.github.io/aidialog/dialog.html.md"""
 __all__ = ['smsg_types', 'scode', 'snote', 'sprompt', 'sraw', 'AI_RENDERERS', 'INTERRUPTED', 'tiny_png', 'add_id_hash', 'Msgs',
            'BaseDialog', 'Dialog', 'mk_output', 'mk_displayobj', 'displayobj', 'mk_code_output', 'code_output',
            'prompt_output', 'get_output_mds', 'Message', 'get_msg', 'header_info', 'section_msgs',
-           'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'render_md', 'ai_fmt', 'try_eval',
-           'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py', 'dlg2py', 'copy_export',
-           'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'msg2xml', 'RunResult', 'export_filter']
+           'normalize_text_latex', 'render_output_ai', 'render_outputs_ai', 'out_parts', 'render_md_parts', 'render_md',
+           'ai_fmt', 'try_eval', 'mk_jmsg', 'mk_stream', 'mk_error', 'mk_dispdata', 'mk_execresult', 'msgs2py',
+           'dlg2py', 'copy_export', 'merge_metas', 'merge_parts', 'ruuid4', 'Attachment', 'msg2xml', 'RunResult',
+           'export_filter']
 
 # %% ../nbs/01_dialog.ipynb #5571d07a
 import asyncio, base64, copy, random, re
@@ -378,35 +379,43 @@ def render_outputs_ai(outputs, renderers=None, dollars=False):
     return '\n'.join(render_output_ai(o, renderers=renderers, dollars=dollars) for o in concat_streams(outputs))
 
 # %% ../nbs/01_dialog.ipynb #11fded06
-def _render_md(out, html1st=True):
-    "One output as a Markdown part: `('txt',s)` pools into a shared fence, `('md',s)` stands alone"
+def _out_part(out, html1st=True):
+    "One output as a `(kind, text)` part, or None when it has nothing to show"
     mime,d = preferred_msg_out(out, html1st=html1st, include_imgs=True)
     d = join_out(d)
     if not d: return None
     if   mime=='text/plain': return 'txt', strip_ansi(d)
-    elif mime=='text/html': return 'md', fenced(d.strip(), '{=html}')
-    elif mime=='application/javascript': return 'md', fenced(f'<script>{d}</script>', '{=html}')
-    elif mime=='image/svg+xml': return 'md', fenced(d.strip(), '{=html}')
+    elif mime in ('text/html','image/svg+xml'): return 'html', d.strip()
+    elif mime=='application/javascript': return 'html', f'<script>{d}</script>'
     elif mime in ('text/markdown','text/latex'): return 'md', d.strip()
-    elif mime in IMG_MIMES: return 'md', f'![](data:{mime};base64,{"".join(d.split())})'
+    elif mime in IMG_MIMES: return 'img', f'data:{mime};base64,{"".join(d.split())}'
     return None
+
+def out_parts(outputs, html1st=True):
+    "Notebook outputs as `(kind, text)` parts in output order, with `kind` one of `txt`, `html`, `md` or `img`"
+    if (not isinstance(outputs, (list,tuple))) or (outputs and not isinstance(outputs[0],dict)): return []
+    parts,buf = [],[]
+    def _flush():
+        if (txt := ''.join(buf).rstrip()): parts.append(('txt', txt))
+        buf.clear()
+    for out in concat_streams(outputs):
+        if not (r := _out_part(out, html1st=html1st)): continue
+        if r[0]=='txt': buf.append(r[1] if r[1].endswith('\n') else r[1]+'\n')
+        else:
+            _flush()
+            parts.append(r)
+    _flush()
+    return parts
+
+_md_parts = dict(txt=fenced, html=lambda s: fenced(s, '{=html}'), md=lambda s: s, img=lambda s: f'![]({s})')
+
+def render_md_parts(parts):
+    "Write prepared `out_parts` as Markdown"
+    return '\n\n'.join(_md_parts[k](s) for k,s in parts)
 
 def render_md(outputs, html1st=True):
     "Render notebook outputs as Markdown: text to ``` fences, HTML in `{=html}`, markdown inlined, images as data URIs"
-    if (not isinstance(outputs, (list,tuple))) or (outputs and not isinstance(outputs[0],dict)): return ''
-    parts,buf = [],[]
-    def _flush():
-        if (txt := ''.join(buf).rstrip()): parts.append(fenced(txt, 'output'))
-        buf.clear()
-    for out in concat_streams(outputs):
-        if not (r := _render_md(out, html1st=html1st)): continue
-        k,s = r
-        if k=='txt': buf.append(s if s.endswith('\n') else s+'\n')
-        else:
-            _flush()
-            parts.append(s)
-    _flush()
-    return '\n\n'.join(parts)
+    return render_md_parts(out_parts(outputs, html1st=html1st))
 
 # %% ../nbs/01_dialog.ipynb #027d1774
 INTERRUPTED = '*[Response interrupted]*'  # marker line hosts append to a reply cut off mid-stream; `ai_fmt` strips it
