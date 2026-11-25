@@ -13,10 +13,9 @@ __all__ = ['PartType', 'tool_info', 'think_start', 'think_end', 'fence_call_re',
            'trunc_str', 'mk_tr_details', 'hist2fmt', 'mk_msg', 'mk_msgs']
 
 # %% ../nbs/00_msg_parts.ipynb #a616b4f5
-import base64, json, copy, mimetypes
+import json, copy, mimetypes
 from json import dumps
 from fastcore.utils import *
-from fastcore.xtras import detect_mime
 
 # %% ../nbs/00_msg_parts.ipynb #2212704a
 class Part(BasicRepr):
@@ -244,10 +243,7 @@ _ext_mime = {
 
 def data_url(url):
     "Parse data:mime;base64,data URL into (mime, b64_data), or None."
-    if not isinstance(url, str) or not url.startswith('data:') or ',' not in url: return None
-    header, body = url.split(',', 1)
-    if ';base64' not in header or not body: return None
-    return header[5:].split(';',1)[0].strip() or 'application/octet-stream', body
+    return (res[1], res[0]) if (res := from_data_url(url, decode=False)) else None
 
 def url_mime(url, default='application/octet-stream'):
     "Guess mime from URL extension, then the server's Content-Type, then sniffed bytes; never None."
@@ -276,8 +272,7 @@ def _bytes2content(data):
     "Convert bytes to fastllm canonical content"
     mtype = detect_mime(data)
     if not mtype: raise ValueError(f'Data must be a supported file type, got {data[:10]}')
-    encoded = base64.b64encode(data).decode("utf-8")
-    return _mime2part_cls(mtype)(f'data:{mtype};base64,{encoded}', mime=mtype)
+    return _mime2part_cls(mtype)(to_data_url(data, mtype), mime=mtype)
 
 def _url2content(o):
     "Convert MediaUrl to fastllm canonical content"
