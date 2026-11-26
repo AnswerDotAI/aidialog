@@ -149,15 +149,21 @@ class Message:
         # Bare hex, coerced to str: hosts add any display prefix (e.g. solveit's DOM `_`) at their boundary
         id = rtoken_hex(4) if id is None else str(id)
         attachments = listify(attachments)
-        meta = dict(meta or {})
-        for a,k in self.meta_attrs.items():  # declared fields promote out of `meta` at birth, as on read
-            if k in meta: setattr(self, a, meta.pop(k))
+        meta = self._promote_meta(meta)  # declared fields promote out of `meta` at birth, as on read
         if content  is UNSET: content = ''
         if msg_type is UNSET: msg_type = snote
         if output   is UNSET: output=[] if msg_type in (scode, sprompt) else ''
         self.msg_type = msg_type # Set type first, since it clears output
         store_attr(but=['msg_type', 'xtras'])
         for k,v in xtras.items(): setattr(self, k, v)
+
+    def _promote_meta(self, meta, reset_none=False):
+        meta = dict(meta or {})
+        for a, mk in self.meta_attrs.items():
+            if mk in meta:
+                v = meta.pop(mk)
+                setattr(self, a, getattr(type(self), a, None) if reset_none and v is None else v)
+        return meta
 
     # Invalidation hook, called when output or type change; subclasses clear their extra output caches here
     def clear_out_cache(self): self._ai_rend = None
@@ -226,21 +232,32 @@ Message._repr_markdown_ = Message.preview
 # %% ../nbs/01_dialog.ipynb #a0465cdb
 @patch
 def mk_message(self:BaseDialog,
-    content:str, # Message text
+    content:str|Message|dict, # Message text, `Message` to clone (fresh id), or dict of `mk_message` args (`source` or `content`)
     idx=-1, # Insert position; -1 appends
     after=None, # Insert after this `Message` or id
     before=None, # Insert before this `Message` or id
-    msg_type=scode, # One of `smsg_types`
-    output='', # Output list; code messages also accept a JSON string
-    meta=None, # Cell metadata, carried verbatim through save/load
+    msg_type=UNSET, # One of `smsg_types` (default `scode`)
+    output=UNSET, # Output list; code messages also accept a JSON string
+    meta=UNSET, # Cell metadata, carried verbatim through save/load
     export=False, # Also set the meta `nbdev` export flag? (`meta_exported`)
     **kwargs, # Passed to `msg_cls`
 ):
     "Create and insert a message, appending by default"
+    if isinstance(content, Message):
+        kw = {o: getattr(content, o) for o in content.flds if o!='id'}
+        kw.update(output=content.output, attachments=content.attachments)
+        content = content.content
+    elif isinstance(content, dict):
+        kw = dict(content)
+        content = kw.pop('source') if 'source' in kw else kw.pop('content', '')
+    else: kw = {}
+    kw.update({k: v for k, v in dict(msg_type=msg_type, output=output, meta=meta).items() if v is not UNSET})
+    kw.update(kwargs)
+    msg_type, output, meta, export = kw.pop('msg_type', scode), kw.pop('output', ''), kw.pop('meta', None), export or kw.pop('export', False)
     if msg_type==scode and isinstance(output,str): output = loads(output or '[]')
-    msg = self.msg_cls(content, msg_type=msg_type, output=output, meta=meta, **kwargs)
+    msg = self.msg_cls(content, msg_type=msg_type, output=output, meta=meta, **kw)
     if export: msg.meta_exported = True
-    if 'id' not in kwargs:  # generated ids must not collide, even if the global random stream was re-seeded
+    if 'id' not in kw:  # generated ids must not collide, even if the global random stream was re-seeded
         while any(m.id==msg.id for m in self.messages): msg.id = rtoken_hex(4)
     if isinstance(after,  Message): after =after.id
     if isinstance(before, Message): before=before.id
@@ -251,18 +268,21 @@ def mk_message(self:BaseDialog,
     return msg
 
 @patch
-@delegates(BaseDialog.mk_message)
-def mk_message(self:Dialog, content:str, **kwargs):
+@delegates(BaseDialog.mk_message, keep=True)
+def mk_message(self:Dialog, content:str|Message|dict, **kwargs):
     res = BaseDialog.mk_message(self, content, **kwargs)
     res.dlg = self
     return res
 
 # %% ../nbs/01_dialog.ipynb #d499654b
 @patch
-def mk_messages(self:BaseDialog, msgs, after=None, before=None):
-    "Make new messages and insert them sequentially into the notebook after/before a specific message."
-    def _kws(m): return {o: getattr(m,o) for o in m.flds if o!='id'}
-    return [after:=self.mk_message(m.content,output=m.output,attachments=m.attachments,after=after, before=before, **_kws(m)) for m in msgs]
+def mk_messages(self:BaseDialog,
+    msgs, # Sequence of strings, `Message`s, or dicts (passed to `mk_message`)
+    after=None, # Insert after this `Message` or id
+    before=None, # Insert before this `Message` or id
+):
+    "Make new messages and insert them sequentially into the dialog after/before a specific message."
+    return [after := self.mk_message(m, after=after, before=None if i else before) for i, m in enumerate(msgs)]
 
 # %% ../nbs/01_dialog.ipynb #e668fd4f
 @patch
@@ -532,16 +552,18 @@ def has_directive(self:Message, name):
 # %% ../nbs/01_dialog.ipynb #e4fb159d
 @patch
 def update(self:Message,
-    mergemeta:dict=None, # `deep_merge` into `meta`; a `None` value deletes its key
+    mergemeta:dict=None, # `deep_merge` into `meta` (routing `meta_attrs` keys to their attributes); a `None` value deletes/resets its key
     export:bool=None, # Add (True) or remove (False) the nbdev export directive; a content-form line migrates to meta
-    **kwargs, # Attributes to assign, e.g. `content=`, `msg_type=`, `output=`, or `meta=` (replacing it wholesale)
+    **kwargs, # Attributes to assign, e.g. `content=`, `msg_type=`, `output=`, `skipped=`, `pinned=`, or `meta=` (replacing it wholesale)
 ):
     "Update this message's attributes; returns self"
     for k, v in kwargs.items():
         if not (hasattr(self, k) or k in self.meta_attrs):
             raise AttributeError(f'{k!r} is not a declared Message field; use mergemeta= for custom metadata')
-        if v is not UNSET: setattr(self, k, v)
-    if mergemeta is not None: self.meta = deep_merge(self.meta, mergemeta)
+        if v is UNSET: continue
+        if k == 'meta': v = self._promote_meta(v)
+        setattr(self, k, v)
+    if mergemeta is not None: self.meta = deep_merge(self.meta, self._promote_meta(mergemeta, reset_none=True))
     if export is not None:
         c = mk_cell(self.content)
         d = c.directives

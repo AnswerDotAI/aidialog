@@ -20,7 +20,7 @@ NB: this file is designed for an LLM reader, not a human. Add it to your LLM's c
 - text editors' `out=True`: prompt replies only; other outputs: assign `m.output`
 
 - magics: `%nbrun` (`nbrun_magic`), `%%add_msg` (`add_msg_magic`)
-- `Dialog.execute`, `Message.execute`: capture outputs on held messages
+- `execute_dlg`, `Dialog.execute`, `Message.execute`: capture outputs (file or held)
 
 Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 
@@ -30,8 +30,9 @@ Docs: https://AnswerDotAI.github.io/aidialog/dlgskill.html.md"""
 __all__ = ['msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_ast_replace',
            'set_dlg', 'cur_dlg', 'set_cur_msg', 'cur_msg', 'summary_dlg', 'view_dlg', 'view_msg', 'view_msgs',
            'FoundMsgs', 'find_msgs', 'move_msgs', 'split_msg', 'merge_msgs', 'copy_msgs', 'cut_msgs', 'paste_msgs',
-           'symdef_finder', 'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'del_msgs',
-           'create_dlg', 'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension']
+           'symdef_finder', 'symref_finder', 'ast_finder', 'lnhashview_msg', 'msg_exhash', 'add_msg', 'add_msgs',
+           'del_msgs', 'create_dlg', 'update_msg', 'add_msg_magic', 'nbrun_magic', 'load_ipython_extension',
+           'execute_dlg', 'Dialog', 'Message', 'read_ipynb']
 
 # %% ../nbs/04_dlgskill.ipynb #a0aeb3fe
 import shlex, re, copy
@@ -44,6 +45,7 @@ from fastcore.nbio import read_nb, select_cells, run_cell, Found, MAXLEN
 from fastcore.tools import insert_line, str_replace, strs_replace, replace_lines, del_lines, ast_replace
 from .dialog import *
 from .ipynb import read_ipynb, write_ipynb
+_all_ = ['Dialog', 'Message', 'read_ipynb']
 
 
 # %% ../nbs/04_dlgskill.ipynb #e8e710e8
@@ -489,6 +491,19 @@ def add_msg(
     _save(d, sv)
     return m
 
+def add_msgs(
+    msgs, # Sequence of strings, `Message`s, or dicts (keys for `Dialog.mk_message`, accepting `source` or `content`)
+    before:str=None, # message or id to insert before
+    after:str=None, # message or id to insert after; defaults to the current message (`set_cur_msg`)
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
+) -> Msgs:
+    "Add messages in order before or after an existing one in one save, returning them"
+    d = _to_dlg(dlg)
+    if dlg is None and before is None and after is None: after = first(m for m in d.messages if m.id==cur_msgid)
+    res = Msgs(d.mk_messages(msgs, before=None if before is None else d.msg(before), after=None if after is None else d.msg(after)))
+    if res: _save(d)
+    return res
+
 def del_msgs(
     *ids, # Messages or ids to delete
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
@@ -514,7 +529,7 @@ def create_dlg(
     return d
 
 # %% ../nbs/04_dlgskill.ipynb #96d9eca6
-@delegates(Message.update)
+@delegates(Message.update, keep=True)
 def update_msg(
     id, # A `Message`, or an id: exact, or unique prefix
     dlg=None, # An ipynb path (expands `~`); the current dialog file if None
@@ -523,7 +538,7 @@ def update_msg(
     "Update a message's type, meta, or export directive in the dialog file (see `Message.update`)"
     d = _to_dlg(dlg)
     m = d.msg(id)
-    def _snap(): return f"{to_xml(msg2xml(m))}\nmeta: {dict(sorted(m.meta.items()))}"
+    def _snap(): return f"{to_xml(msg2xml(m))}\nmeta: {dict(sorted(m.cell_meta().items()))}"
     before = _snap()
     m.update(**kwargs)
     _save(d)
@@ -595,3 +610,17 @@ try:
     from IPython import get_ipython
     if (_ip := get_ipython()): load_ipython_extension(_ip)
 except ImportError: pass
+
+# %% ../nbs/04_dlgskill.ipynb #87a86c41
+@delegates(Dialog.execute)
+def execute_dlg(
+    *ids, # Message ids, or unique prefixes, to run; with `above`/`below`, the anchor; none, with no selection flags: run all
+    dlg=None, # An ipynb path (expands `~`); the current dialog file if None
+    save:bool=True, # Write captured outputs back to the dialog file?
+    **kwargs,
+):
+    "Run code messages of the dialog file on an execnb `CaptureShell`, persisting captured outputs by default, and return a `RunResult`"
+    d = _to_dlg(dlg)
+    res = d.execute(*ids, **kwargs)
+    if save: _save(d)
+    return res
