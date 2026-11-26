@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.43
+
+### New Features
+
+- Add `add_msgs` and `execute_dlg`, support dict/Message in `mk_message`(s), promote `meta_attrs` in update, and re-export core symbols ([#73](https://github.com/AnswerDotAI/aidialog/issues/73))
+- Add `ansi_html` option to `render_md` ([#18](https://github.com/AnswerDotAI/aidialog/pull/18)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.0.42
 
 ### New Features
